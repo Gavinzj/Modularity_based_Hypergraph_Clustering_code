@@ -1,0 +1,2 @@
+runningTime,0.01027778
+AllMemoryUse,109.26352353
