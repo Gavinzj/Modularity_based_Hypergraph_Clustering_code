@@ -307,7 +307,7 @@ public class PIC_noPrune_quality {
 			}
 
 			ratio_u = thisWeight / edgeWeight;
-			if (ratio_u >= ratio) contribute_u = adjustWeight_Quadratic(edgeWeight, ratio_u);
+			if (ratio_u >= ratio) contribute_u = adjustWeight_LinearLog(edgeWeight, ratio_u);
 			else contribute_u = 0;
 
 			for (int j = 0; j < incident_clusterNum; j++) {
@@ -318,11 +318,11 @@ public class PIC_noPrune_quality {
 				ratio_cNotu = fractions[clusterIdx] / edgeWeight;
 				fractions[clusterIdx] = 0;
 
-				if (ratio_cNotu >= ratio) contribute_cNotu = adjustWeight_Quadratic(edgeWeight, ratio_cNotu);
+				if (ratio_cNotu >= ratio) contribute_cNotu = adjustWeight_LinearLog(edgeWeight, ratio_cNotu);
 				else contribute_cNotu = 0;
 
 				ratio_c = ratio_u + ratio_cNotu;
-				if (ratio_c >= ratio) contribute_c = adjustWeight_Quadratic(edgeWeight, ratio_c);
+				if (ratio_c >= ratio) contribute_c = adjustWeight_LinearLog(edgeWeight, ratio_c);
 				else contribute_c = 0;
 
 				incident_weights[clusterIdx] += (contribute_c - contribute_u - contribute_cNotu);
@@ -433,37 +433,9 @@ public class PIC_noPrune_quality {
 		return edgeWeight * (1 - sigmod);
 	}
 
-	public double adjustWeight_Tanh(double thisWeight, double edgeWeight, double fraction) {
-		double adjustedWeight = 0;
-
-		if (fraction > 0) {
-			double thisRatio = (fraction + thisWeight) / edgeWeight;
-			if (thisRatio >= ratio) {
-				double invRatio = 1.0 / thisRatio;
-				double exp = Math.exp(-1 * 0.5 * (invRatio - 1));
-				double sigmod = 2 * (1.0 / (1 + exp) - 0.5);
-				adjustedWeight = edgeWeight * (1 - sigmod);
-			}
-		}
-
-		return adjustedWeight;
-	}
-
 	public double adjustWeight_Quadratic(double edgeWeight, double thisRatio) {
 		double fractionPow = Math.pow(thisRatio, 2);
 		return edgeWeight * fractionPow;
-	}
-
-	public double adjustWeight_Cube(double edgeWeight, double fraction) {
-		double adjustedWeight = 0;
-
-		double thisRatio = fraction / edgeWeight;
-		if (thisRatio >= ratio) {
-			double fractionPow = Math.pow(thisRatio, 3);
-			adjustedWeight = edgeWeight * fractionPow;
-		}
-
-		return adjustedWeight;
 	}
 
 	public void rebuildGraph(boolean firstReConstruct) {

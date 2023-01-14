@@ -684,78 +684,28 @@ public class PIC_prune1_speed {
 		return (((vol_c / totalEdgeWeight) - 1) * ratio) + 1;
 	}
 
-	public double adjustWeight_AON(double edgeWeight, double fraction) {
-		double adjustedWeight = 0;
-
-		double thisRatio = fraction / edgeWeight;
-		if (thisRatio >= ratio) {
-			adjustedWeight = edgeWeight;
-		}
-
-		return adjustedWeight;
+	public double adjustWeight_AON(double edgeWeight, double thisRatio) {
+		if (thisRatio >= 1.0) return edgeWeight;
+		return 0;
 	}
 
 	public double adjustWeight_LinearLog(double edgeWeight, double thisRatio) {
-		double linear = thisRatio;
-		double invRatio = 1.0 / thisRatio;
-		double log = Math.log(invRatio + 1) / Math.log(2);
-		double linear_log = linear * (1.0 / log);
+		double log = Math.log((1.0 / thisRatio) + 1) / Math.log(2);
+		double linear_log = thisRatio * (1.0 / log);
 
 		return edgeWeight * linear_log;
 	}
 
-	public double adjustWeight_Sigmoid(double edgeWeight, double fraction) {
-		double adjustedWeight = 0;
+	public double adjustWeight_Sigmoid(double edgeWeight, double thisRatio) {
+		double exp = Math.exp(1 - (1.0 / thisRatio));
+		double sigmod = 2 * ((1.0 / (1 + exp)) - 0.5);
 
-		double thisRatio = fraction / edgeWeight;
-		if (thisRatio >= ratio) {
-			double invRatio = 1.0 / thisRatio;
-			double exp = Math.exp(-1 * (invRatio - 1));
-			double sigmod = 2 * ((1.0 / (1 + exp)) - 0.5);
-			adjustedWeight = edgeWeight * (1 - sigmod);
-		}
-
-		return adjustedWeight;
+		return edgeWeight * (1 - sigmod);
 	}
 
-	public double adjustWeight_Tanh(double thisWeight, double edgeWeight, double fraction) {
-		double adjustedWeight = 0;
-
-		if (fraction > 0) {
-			double thisRatio = (fraction + thisWeight) / edgeWeight;
-			if (thisRatio >= ratio) {
-				double invRatio = 1.0 / thisRatio;
-				double exp = Math.exp(-1 * 0.5 * (invRatio - 1));
-				double sigmod = 2 * (1.0 / (1 + exp) - 0.5);
-				adjustedWeight = edgeWeight * (1 - sigmod);
-			}
-		}
-
-		return adjustedWeight;
-	}
-
-	public double adjustWeight_Quadratic(double edgeWeight, double fraction) {
-		double adjustedWeight = 0;
-
-		double thisRatio = fraction / edgeWeight;
-		if (thisRatio >= ratio) {
-			double fractionPow = Math.pow(thisRatio, 2);
-			adjustedWeight = edgeWeight * fractionPow;
-		}
-
-		return adjustedWeight;
-	}
-
-	public double adjustWeight_Cube(double edgeWeight, double fraction) {
-		double adjustedWeight = 0;
-
-		double thisRatio = fraction / edgeWeight;
-		if (thisRatio >= ratio) {
-			double fractionPow = Math.pow(thisRatio, 3);
-			adjustedWeight = edgeWeight * fractionPow;
-		}
-
-		return adjustedWeight;
+	public double adjustWeight_Quadratic(double edgeWeight, double thisRatio) {
+		double fractionPow = Math.pow(thisRatio, 2);
+		return edgeWeight * fractionPow;
 	}
 
 	public void rebuildGraph(boolean firstReConstruct) {
