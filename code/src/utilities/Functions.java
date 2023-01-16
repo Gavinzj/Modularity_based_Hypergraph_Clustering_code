@@ -8,10 +8,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
-/**
- * @author feng zijin
- *
- */
 public class Functions {
 
 	public static int binomialCoe(int m) {
