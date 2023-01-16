@@ -1,6 +1,3 @@
-/**
- * 
- */
 package utilities;
 
 import java.util.HashSet;
