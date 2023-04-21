@@ -5,15 +5,12 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Scanner;
 import java.util.concurrent.CountDownLatch;
 
 import hyperGraph.Hypergraph;
@@ -28,12 +25,12 @@ public class SingleGTruth {
 	String method;
 	boolean isBaseline;
 	
-	int maxClusterSize;
-
-	// Hypergraph
-	int n;
+	int minClusterSize = 0;	// regard the cluster with size less than or equals to minClusterSize as outlier, skip
+	
+	// variables for hypergraph
 	double gamma;
-	double totalEdgeWeight;
+	double ratio;
+	double vol_H;
 	double[] node_weights;
 	
 	ArrayList<ArrayList<Integer>> allComponents;
@@ -61,38 +58,22 @@ public class SingleGTruth {
 	double[] avgClusterSizes_Discover;
 	double[] midClusterSizes_Discover;
 	
-	// for top k
-	// [trial][cluster]
-	int[][][] clusters_Ground_largestk;
-	int[][] vertex2Cluster_Ground_largestk;
-	int[] classifiedNums_Ground_largestk;
-	// [trial][cluster]
-	List<Integer>[][] clusters_Discover_largestk;	// cluster to nodes
-	int[][] vertex2Cluster_Discover_largestk;
-	int[] classifiedNums_Discover_largestk;
-	
+	// calculate the metric scores in parallel
 	LoadDiscover LoadDiscover;
-	LoadDiscover_GroundTruthOnly LoadDiscover_GroundTruthOnly;
-
 	CountDownLatch latch;
 	
 	public boolean DiscoverLoaded;
-	public boolean GraphLoaded;
-
-	/////////////////////////////////// for PRF ///////////////////////////////////
-	// [trial]
-	double[] precisions;
-	double[] recalls;
-	double[] f1s;
-	private PRF PRF;
+	public boolean ComponentLoaded;
 	
 	/////////////////////////////////// for PRF_Prime ///////////////////////////////////
 	// [trial]
-	double[] precisions_Prime;
-	double[] recalls_Prime;
-	double[] f1s_Prime;
-	double[] ris_Prime;
-	double[] aris_Prime;
+	double[][] ConfusionMatrix;	//[TP, FN, FP, TN]
+	double[] precisions_Prime;	// precision
+	double[] recalls_Prime;	// recall
+	double[] f1s_Prime;	// f1-measure
+	double[] aris_Prime;	// adjusted rand index
+	double[] jcc_Prime;	// jaccard index
+	double[] balRi_Prime;	// balanced accuracy
 	PRF_Prime PRF_Prime;
 	
 	double[] avgTPFNs;
@@ -100,149 +81,54 @@ public class SingleGTruth {
 	
 	/////////////////////////////////// for NMI ///////////////////////////////////
 	// [trials]
-	double[] NMIs;
+	double[] NMIs;	// nmi
 	NMI NMI;
 	
 	/////////////////////////////////// for Purity ///////////////////////////////////
 	// [trials]
-	double[] Purities;
+	double[] Purities;	// purity
 	Purity Purity;
-	
-	/////////////////////////////////// for ARIs ///////////////////////////////////
-	// [trials]
-	double[] ARIs;
-	ARI ARI;
 	
 	/////////////////////////////////// for ARIs_Prime ///////////////////////////////////
 	// [trials]
-	double[] ARIs_Prime;
+	double[] ARIs_Prime;	// adjusted rand index
 	ARI_Prime ARI_Prime;
 	double[] avgDiscoverCoverCnts;
 	double[] avgGroundCoverCnts;
 	double[] avgNoCoverCnts;
-	
-	///////////////////////////// for HModularity /////////////////////////////////
-	// [trials]
-	double[] HModularities;
-	double HModularities_Ground;
-	HModularity HModularity;
-	
-	///////////////////////////// for HConductance /////////////////////////////////
-	// [trials]
-	double[] HConductances;
-	double HConductances_Ground;
-	HConductance HConductance;
 
-	// for BogLouvain, BogCNMOpt, BogCNMRan, BipartiteLouvain, IRMM, HMLL
-	public SingleGTruth(boolean isBaseline, String algorithm, int maxClusterSize) throws IOException, InterruptedException {
-		
-		System.out.println(algorithm);
-		
-		if (!Constant.CONNECTED) fileInput_groundTruth = FilePath_Mon.filePathPre + "/groundTruth/node_clustering_groundTruth_disconnect.txt";
-		else fileInput_groundTruth = FilePath_Mon.filePathPre + "/groundTruth/node_clustering_groundTruth_connect.txt";
-		
-		this.isBaseline = isBaseline;
-		
-		switch (algorithm) {
-			
-		case "BogLouvain":
-			{
-				fileInput_discover_pre = FilePath_Mon.filePathPre + "/clustering/baseline/";
-				if (!Constant.CONNECTED) method = "BogLouvain";
-				else method = "BogLouvain_connect";
-			}
-			
-			break;
-			
-		case "BogCNMOpt":
-			{
-				fileInput_discover_pre = FilePath_Mon.filePathPre + "/clustering/baseline/";
-				if (!Constant.CONNECTED) method = "BogCNMOpt";
-				else method = "BogCNMOpt_connect";
-			}
-			
-			break;
-		
-		case "BogCNMRan":
-			{
-				fileInput_discover_pre = FilePath_Mon.filePathPre + "/clustering/baseline/";
-				if (!Constant.CONNECTED) method = "BogCNMRan";
-				else method = "BogCNMRan_connect";
-			}
-			
-			break;
-		case "BipartiteLouvain":
-			{
-				fileInput_discover_pre = FilePath_Mon.filePathPre + "/clustering/baseline/";
-				if (!Constant.CONNECTED) method = "BipartiteLouvain";
-				else method = "BipartiteLouvain_connect";
-			}
-			break;
-			
-		case "IRMM":
-			{
-				fileInput_discover_pre = FilePath_Mon.filePathPre + "/clustering/baseline/";
-				if (!Constant.CONNECTED) method = "IRMM";
-				else method = "IRMM_connect";
-			}
-			break;
-		
-		case "HMLL":
-			{
-				fileInput_discover_pre = FilePath_Mon.filePathPre + "/clustering/baseline/";
-				if (!Constant.CONNECTED) method = "HMLL";
-				else method = "HMLL_connect";
-			}
-			break;
-			
-		case "GMLL":
-			{
-				fileInput_discover_pre = FilePath_Mon.filePathPre + "/clustering/baseline/";
-				if (!Constant.CONNECTED) method = "GMLL";
-				else method = "GMLL_connect";
-			}
-			break;
-			
-		case "HPPR":
-		{
-			fileInput_discover_pre = FilePath_Mon.filePathPre + "/clustering/baseline/";
-			if (!Constant.CONNECTED) method = "HPPR";
-			else method = "HPPR_connect";
-		}
-			break;
-		}
-		
-		loadGroundTruth(maxClusterSize);
-		
-		DiscoverLoaded = false;
-		GraphLoaded = false;
-	}
-	
 	// for PIC
-	public SingleGTruth(boolean isBaseline, String moveStrategy, int strategy, boolean toHigherOrder, String ordering, double ratio) throws IOException, InterruptedException {
+	public SingleGTruth(boolean isBaseline, int minClusterSize, String ordering, double ratio) throws IOException, InterruptedException {
 		
-		System.out.println(moveStrategy);
+		// to set the file paths linking to the ground truth clustering and discovered clusterings, then
+		// load the ground truth clustering
 		
+		// file paths to ground truth clustering
+		// Note that here, the value of global variable FilePath_Mon.filePathPre has been modified
+		// based on the user input using the command processor in exp/Panel.java
 		if (!Constant.CONNECTED) fileInput_groundTruth = FilePath_Mon.filePathPre + "/groundTruth/node_clustering_groundTruth_disconnect.txt";
 		else fileInput_groundTruth = FilePath_Mon.filePathPre + "/groundTruth/node_clustering_groundTruth_connect.txt";
 		
 		this.isBaseline = isBaseline;
 		
+		// file path to discovered clustering
 		fileInput_discover_pre = FilePath_Mon.filePathPre + "/clustering/pic/";
 		ratio = (double) Math.round(ratio * Constant.PRECISION_ENLARGE) / Constant.PRECISION_ENLARGE;
+		this.ratio = ratio;
 		
-		if (!Constant.CONNECTED) method = "pic_" + moveStrategy + "_ordered_" + toHigherOrder + "_order_" + ordering + "_ratio_" + ratio;
-		else method = "pic_" + moveStrategy + "_ordered_" + toHigherOrder + "_order_" + ordering + "_ratio_" + ratio + "_connect";
+		if (!Constant.CONNECTED) method = "pic_move_ordered_false_order_" + ordering + "_ratio_" + ratio;
+		else method = "pic_move_ordered_false_order_" + ordering + "_ratio_" + ratio + "_connect";
 		
-		loadGroundTruth(strategy);
+		// load the ground truth clustering
+		loadGroundTruth();
 		
 		DiscoverLoaded = false;
-		GraphLoaded = false;
+		ComponentLoaded = false;
 	}
 	
-	public void loadGroundTruth(int maxClusterSize) throws IOException {
+	public void loadGroundTruth() throws IOException {
 		
-		this.maxClusterSize = maxClusterSize;
+		// a program to load the ground truth clustering
 		
 		ArrayList<ArrayList<Integer>> clusters = new ArrayList<ArrayList<Integer>>();
 
@@ -255,7 +141,7 @@ public class SingleGTruth {
 				
 				// process each line
 				strs = line.split("\t");
-				if (strs.length <= maxClusterSize) continue;
+				if (strs.length <= minClusterSize) continue;
 				
 				nodes = new ArrayList<Integer>(strs.length);
 				for (int i = 0; i < strs.length; i++) {
@@ -333,7 +219,7 @@ public class SingleGTruth {
 						// process each line
 						strs = line.split("\t");
 						
-						if (strs.length <= maxClusterSize) continue;
+						if (strs.length <= minClusterSize) continue;
 						
 						nodes = new ArrayList<Integer>(strs.length);
 						
@@ -388,10 +274,12 @@ public class SingleGTruth {
 		}
 	}
 	
-	public void loadDiscover(int trials, int maxClusterSize)
+	public void loadDiscover(int trials)
 			throws IOException, InterruptedException {
 		
-		this.maxClusterSize = maxClusterSize;
+		// a program to load the discovered clustering
+		
+		// initialize the variables for loading the discovered clusters
 		clusters_Discover = new ArrayList[trials][];
 		vertex2Cluster_Discover = new int[trials][Hypergraph.getVertexSize()];
 		classifiedNums_Discover = new int[trials];
@@ -400,183 +288,22 @@ public class SingleGTruth {
 		midClusterSizes_Discover = new double[trials];
 		avgClusterSizes_Discover = new double[trials];
 		
-		clusters_Ground_largestk = new int[trials][][];
-		vertex2Cluster_Ground_largestk = new int[trials][];
-		classifiedNums_Ground_largestk = new int[trials];
-		// [trial][cluster]
-		clusters_Discover_largestk = new ArrayList[trials][];;
-		vertex2Cluster_Discover_largestk = new int[trials][Hypergraph.getVertexSize()];;
-		classifiedNums_Discover_largestk = new int[trials];
-		
+		// load the discovered clusters in parallel
 		latch = new CountDownLatch(trials);
-		
 		for (int trial = 0; trial < trials; trial++) {
 			LoadDiscover = new LoadDiscover(trial);
 		}
-		
 		latch.await();
 		
+		// discovered clusters have been loaded
 		DiscoverLoaded = true;
 	}
 
-	private class LoadDiscover_GroundTruthOnly extends Thread{
-		private int trial;
-		
-		LoadDiscover_GroundTruthOnly(int trial) throws InterruptedException {
-			this.trial = trial;
-			start();
-		}
-		
-		public void run() {
-			
-			ArrayList<ArrayList<Integer>> clusters = new ArrayList<ArrayList<Integer>>();
-			
-			try {
-				int classifiedNum= 0;
-				String line;
-				String[] strs;
-				int v;
-				ArrayList<Integer> nodes;
-				try (FileReader reader = new FileReader(fileInput_discover_pre + "node_cluster_" + method + "_trial_" + trial + ".txt");
-						BufferedReader bufferedReader = new BufferedReader((reader))) {
-					while ((line = bufferedReader.readLine()) != null) {
-						
-						// process each line
-						strs = line.split("\t");
-						
-						if (strs.length <= maxClusterSize) continue;
-						
-						nodes = new ArrayList<Integer>(strs.length);
-						
-						for (int i = 0; i < strs.length; i++) {
-							v = Integer.parseInt(strs[i]);
-							if (vertex2Cluster_Ground[v] == -1) continue;
-							
-							nodes.add(v);
-							classifiedNum++;
-						}
-						
-						clusters.add(nodes);
-					}
-				}
-
-				int size;
-				double avgSize = 0;
-				int[] sizes = new int[clusters.size()];
-				
-				clusters_Discover[trial] = new ArrayList[clusters.size()];
-				Arrays.fill(vertex2Cluster_Discover[trial], -1);
-				
-				for (int clusterID = 0; clusterID < clusters.size(); clusterID++) {
-					
-					size = clusters.get(clusterID).size();
-					avgSize += size;
-					sizes[clusterID] = size;
-					
-					clusters_Discover[trial][clusterID] = clusters.get(clusterID);
-					
-					for (int node : clusters.get(clusterID)) {
-						vertex2Cluster_Discover[trial][node] = clusterID;
-					}
-				}
-				
-				avgSize /= clusters.size();
-				SingleMergeSort SSort = new SingleMergeSort();
-				SSort.sort(sizes);
-				
-				classifiedNums_Discover[trial] = classifiedNum;
-				minClusterSizes_Discover[trial] = sizes[0];
-				maxClusterSizes_Discover[trial] = sizes[sizes.length - 1];
-				midClusterSizes_Discover[trial] = sizes[(sizes.length-0)/2];
-				avgClusterSizes_Discover[trial] = avgSize;
-
-//				System.out.println("trial " + trial + " number of discovered cluster " + clusters_Discover[trial].length + " classified node size " + classifiedNum);
-				
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			
-			latch.countDown();
-		}
-	}
-	
-	public void loadDiscover_GroundTruthOnly(int trials, int maxClusterSize)
-			throws IOException, InterruptedException {
-		
-		this.maxClusterSize = maxClusterSize;
-		
-		clusters_Discover = new ArrayList[trials][];
-		vertex2Cluster_Discover = new int[trials][Hypergraph.getVertexSize()];
-		classifiedNums_Discover = new int[trials];
-		
-		latch = new CountDownLatch(trials);
-		
-		for (int trial = 0; trial < trials; trial++) {
-			LoadDiscover_GroundTruthOnly = new LoadDiscover_GroundTruthOnly(trial);
-		}
-		
-		latch.await();
-		
-		DiscoverLoaded = true;
-	}
-
-	public void loadgraph() throws IOException, InterruptedException {
-		Hypergraph.loadGraph();
-		
-		/////////////////////////////////////////////////////////////////////////////////
-		double lambda = -1;
-		gamma = -1;
-		String[] strs = FilePath_Mon.filePathPre.split("/");
-		String dataset = strs[strs.length - 1];
-		Path path = Paths.get(System.getProperty("user.dir") + "/python/lambdas.txt");
-		Scanner scanner = new Scanner(path.toAbsolutePath());
-		
-		while(scanner.hasNextLine()){
-		    //process each line
-		    strs = scanner.nextLine().split("\t");
-		    if (strs[0].equals(dataset)) lambda = Double.parseDouble(strs[1]);
-		}
-		
-		scanner.close();
-		
-		gamma = Math.exp(-1 * lambda);
-		System.out.println(dataset + " lambda " + lambda + " gamma " + gamma);
-		
-		/////////////////////////////////////////////////////////////////////////////////
-		
-		n = Hypergraph.getVertexSize();
-		node_weights = new double[n];
-		
-		double[] INC_weight = Hypergraph.INC_weight;
-		int[] INC_head = Hypergraph.INC_head;
-    	double weight;
-    	int curID = 0;
-    	int first_idx, second_idx;
-    	
-    	// for each node
-    	for (curID = 0; curID < n - 1; curID++) {
-    		first_idx = INC_head[curID];
-			second_idx = INC_head[curID + 1];
-			
-			// for each neighbor
-			for (int i = first_idx; i < second_idx; i++) {
-				weight = INC_weight[i];
-				node_weights[curID] += weight;
-	        	totalEdgeWeight += weight;
-			}
-    	}
-    	first_idx = INC_head[curID];
-		second_idx = INC_weight.length;
-		for (int i = first_idx; i < second_idx; i++) {
-			weight = INC_weight[i];
-			node_weights[curID] += weight;
-        	totalEdgeWeight += weight;
-		}
-		
-		/////////////////////////////////////////////////////////////////////////////////
+	public void loadComponent() throws IOException, InterruptedException {
 		
 		loadAllComponent();
+		
+		int n = Hypergraph.getVertexSize();
 		component = new int[n];
 		component_weight = new double[allComponents.size()];
 		
@@ -592,7 +319,7 @@ public class SingleGTruth {
 		
 		/////////////////////////////////////////////////////////////////////////////////
 		
-		GraphLoaded = true;
+		ComponentLoaded = true;
 	}
 	
 	private void loadAllComponent() throws FileNotFoundException, IOException {
@@ -626,191 +353,12 @@ public class SingleGTruth {
 		}
 	}
 		
-	private class PRF extends Thread {
-		private int trial;
-
-		PRF(int trial) throws InterruptedException {
-			this.trial = trial;
-			start();
-		}
-
-		public void run() {
-			int groundTruthNum = clusters_Ground.length;
-			int discoverNum = clusters_Discover[trial].length;
-			List<Integer>[] clusters_Discover_pointer = clusters_Discover[trial];
-			
-			double matchingNum = discoverNum;
-			
-			int[] clusterSize_Ground = new int[groundTruthNum];
-			for (int groundTruthIdx = 0; groundTruthIdx < groundTruthNum; groundTruthIdx++) {
-				for (int vID : clusters_Ground[groundTruthIdx]) {
-					if (vertex2Cluster_Discover[trial][vID] != -1) {
-						clusterSize_Ground[groundTruthIdx]++;
-					}
-				}
-			}
-			
-			ArrayList<Double> precision_sort = new ArrayList<Double>(discoverNum);
-			ArrayList<Double> recall_sort = new ArrayList<Double>(discoverNum);
-			ArrayList<Double> f1_sort = new ArrayList<Double>(discoverNum);
-					
-			// for each c1
-			boolean hasMatching;
-			double clusterSize_Discover;
-			double[] counterArr;
-			double intersect, tempPrecision, tempRecall, tempF1, maxPrecision, maxRecall, maxF1;
-			for (int discoverIdx = 0; discoverIdx < discoverNum; discoverIdx++) {
-
-				hasMatching = false;
-				clusterSize_Discover = 0;
-				
-				// counterArr[i] is the intersection of c1 with g_i,
-				counterArr = new double[groundTruthNum];
-
-				// for each element in c1
-				for (int vID : clusters_Discover_pointer[discoverIdx]) {
-					if (vertex2Cluster_Ground[vID] != -1) {
-						clusterSize_Discover++;
-						counterArr[vertex2Cluster_Ground[vID]]++;
-						hasMatching = true;
-					}
-				}
-				
-				if (!hasMatching) {
-					matchingNum--;
-					continue;
-				}
-				
-				maxPrecision = -1;
-				maxRecall = -1;
-				maxF1 = -1;
-				
-				for (int groundTruthIdx = 0; groundTruthIdx < groundTruthNum; groundTruthIdx++) {
-					intersect = counterArr[groundTruthIdx];
-					
-					tempPrecision = intersect / clusterSize_Discover;
-					if (tempPrecision > maxPrecision) maxPrecision = tempPrecision;
-					
-					tempRecall = intersect / (double) clusterSize_Ground[groundTruthIdx];
-					if (tempRecall > maxRecall) maxRecall = tempRecall;
-					
-					tempF1 = (2 * tempPrecision * tempRecall) / (tempPrecision + tempRecall);
-					if (tempF1 > maxF1) maxF1 = tempF1;
-				}
-				
-				precision_sort.add(maxPrecision);
-				recall_sort.add(maxRecall);
-				f1_sort.add(maxF1);
-			}
-			
-			if (groundTruthNum <= matchingNum) {
-				Collections.sort(precision_sort, Collections.reverseOrder());   
-				Collections.sort(recall_sort, Collections.reverseOrder());   
-				Collections.sort(f1_sort, Collections.reverseOrder());
-				
-				for (int i = 0; i < groundTruthNum; i ++) {
-					precisions[trial] += precision_sort.get(i);
-					recalls[trial] += recall_sort.get(i);
-					f1s[trial] += f1_sort.get(i);
-				}
-				
-				precisions[trial] /= groundTruthNum;
-				recalls[trial] /= groundTruthNum;
-				f1s[trial] /= groundTruthNum;
-			} else {
-				for (int i = 0; i < matchingNum; i ++) {
-					precisions[trial] += precision_sort.get(i);
-					recalls[trial] += recall_sort.get(i);
-					f1s[trial] += f1_sort.get(i);
-				}
-				
-				precisions[trial] /= matchingNum;
-				recalls[trial] /= matchingNum;
-				f1s[trial] /= matchingNum;
-			}
-
-			latch.countDown();
-		}
-	}
-
-	public void PRF(int trials, int strategy)
-			throws IOException, InterruptedException {
-		
-		if (!DiscoverLoaded) loadDiscover(trials, strategy);
-		
-		precisions = new double[trials];
-		recalls = new double[trials];
-		f1s = new double[trials];
-		
-		// for discover clusters
-		latch = new CountDownLatch(trials);
-		for (int trial = 0; trial < trials; trial++) {
-			PRF = new PRF(trial);
-		}
-		latch.await();
-		
-		try {
-			// for discover clusters
-			FileWriter fw_user = null;
-			
-			fw_user = new FileWriter(FilePath_Mon.filePathPre + "/measures/PRF_" + method + ".txt",true);
-			// iteration level precision recall f1
-			for (int trial = 0; trial < trials; trial++) {
-				fw_user.write(trial + "," + clusters_Discover[trial].length + "," + clusters_Ground.length + "," + String.format("%.4f",precisions[trial]) + ","
-						+ String.format("%.4f",recalls[trial]) + "," + String.format("%.4f",f1s[trial]) + "\n");
-			}
-			fw_user.write("\n");
-			fw_user.close();
-			
-			fw_user = new FileWriter(FilePath_Mon.filePathPre + "/measures/PRF.txt",true);
-			double avgDiscoverSize = 0;
-			double avgPrecision = 0;
-			double avgRecall = 0;
-			double avgF1 = 0;
-			int cnt_precision = 0;
-			int cnt_recall = 0;
-			int cnt_f1 = 0;
-			// iteration level precision recall f1
-			for (int trial = 0; trial < trials; trial++) {
-				avgDiscoverSize += clusters_Discover[trial].length;
-				
-				if (!Double.isNaN(precisions[trial])) {
-					avgPrecision += precisions[trial];
-					cnt_precision++;
-				}
-				
-				if (!Double.isNaN(recalls[trial])) {
-					avgRecall += recalls[trial];
-					cnt_recall++;
-				}
-				
-				if (!Double.isNaN(f1s[trial])) {
-					avgF1 += f1s[trial];
-					cnt_f1++;
-				}
-				
-			}
-			avgDiscoverSize /= trials;
-			avgPrecision /= cnt_precision;
-			avgRecall /= cnt_recall;
-			avgF1 /= cnt_f1;
-			fw_user.write("PRF_" + method + "\n");
-			fw_user.write(String.format("%.1f",avgDiscoverSize) + "," + clusters_Ground.length + "," + String.format("%.4f",avgPrecision) + ","
-					+ String.format("%.4f",avgRecall) + "," + String.format("%.4f",avgF1) + "\n");
-			fw_user.write("\n");
-			fw_user.close();
-
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-		Hypergraph.garbbageCollector.gc();
-	}
-
 	private class PRF_Prime extends Thread {
 		private int trial;
 
+		// reference: Metrics for evaluating 3D medical image segmentation: analysis, selection, and tool
+		// refernece: https://hal.science/hal-00611319/document
+		
 		PRF_Prime(int trial) throws InterruptedException {
 			this.trial = trial;
 			start();
@@ -925,21 +473,30 @@ public class SingleGTruth {
 				double ari = 2 * ((TP * TN) - (FP * FN));
 				ari = ari / (((TP + FN) * (FN + TN)) + ((TP + FP) * (FP + TN)));
 				
-				if (precision > 1 || recall > 1 || f1 > 1 || ri > 1 || precision < 0 || recall < 0 || f1 < 0 || ri < 0) {
-					System.out.println("N_comp " + N_comp + " N_discover " + N_discover + " N_ground " + N_ground);
-					System.out.println("N " + N + " TP " + TP + " FN " + FN + " FP " + FP + " TN " + TN);
-					System.out.println("TPFP " + TPFP + " TPFN " + TPFN + " FPTN " + FPTN);
-					System.out.println("precision " + precision + " recall " + recall + " f1 " + f1 + " ri " + ri);
-				}
+				double jcc = TP / (TP + FP + FN);
+				
+				double error = (FP + FN) / (TP + FP + FN + TN);
+				
+				double fpr = FP / (FP + TN);
+				
+				double sensitivity = TP / (TP + FN);
+				double specificity = TN / (TN + FP);
+				double balri = (sensitivity + specificity) / 2.0;
+//				double balri = 1.0 / (0.5 * ((1.0 / sensitivity) + (1.0 / specificity)));
 				
 				avgLocTPFN += TPFN;
 				avgLocTPFP += TPFP;
 				
+				ConfusionMatrix[trial][0] += TP;
+				ConfusionMatrix[trial][1] += FN;
+				ConfusionMatrix[trial][2] += FP;
+				ConfusionMatrix[trial][3] += TN;
 				precisions_Prime[trial] += precision;
 				recalls_Prime[trial] += recall;
 				f1s_Prime[trial] += f1;
-				ris_Prime[trial] += ri;
 				aris_Prime[trial] += ari;
+				jcc_Prime[trial] += jcc;
+				balRi_Prime[trial] += balri;
 				cnt++;
 			}
 			
@@ -949,16 +506,16 @@ public class SingleGTruth {
 			avgTPFNs[trial] = avgLocTPFN;
 			avgTPFPs[trial] = avgLocTPFP;
 			
+			ConfusionMatrix[trial][0] /= cnt;
+			ConfusionMatrix[trial][1] /= cnt;
+			ConfusionMatrix[trial][2] /= cnt;
+			ConfusionMatrix[trial][3] /= cnt;
 			precisions_Prime[trial] /= cnt;
 			recalls_Prime[trial] /= cnt;
 			f1s_Prime[trial] /= cnt;
-			ris_Prime[trial] /= cnt;
 			aris_Prime[trial] /= cnt;
-			
-			if (precisions_Prime[trial] > 1 || recalls_Prime[trial] > 1 || f1s_Prime[trial] > 1 || ris_Prime[trial] > 1 || aris_Prime[trial] > 1) {
-				System.out.println("trial precision " + precisions_Prime[trial] + 
-						" recall " + recalls_Prime[trial] + " f1 " + f1s_Prime[trial] + " ri " + ris_Prime[trial] + " ri " + ris_Prime[trial]);
-			}
+			jcc_Prime[trial] /= cnt;
+			balRi_Prime[trial] /= cnt;
 
 			latch.countDown();
 		}
@@ -976,23 +533,23 @@ public class SingleGTruth {
 		}
 	}
 
-	public void PRF_Prime(int trials, int strategy)
+	public void PRF_Prime(int trials)
 			throws IOException, InterruptedException {
 		
-		if (!DiscoverLoaded) loadDiscover(trials, strategy);
+		if (!DiscoverLoaded) loadDiscover(trials);
 		
-		if (!GraphLoaded) {
-			loadgraph();
-		}
+		if (!ComponentLoaded) loadComponent();
 		
 		avgTPFNs = new double[trials];
 		avgTPFPs = new double[trials];
 		
+		ConfusionMatrix = new double[trials][4];
 		precisions_Prime = new double[trials];
 		recalls_Prime = new double[trials];
 		f1s_Prime = new double[trials];
-		ris_Prime = new double[trials];
 		aris_Prime = new double[trials];
+		jcc_Prime = new double[trials];
+		balRi_Prime = new double[trials];
 		
 		// for discover clusters
 		latch = new CountDownLatch(trials);
@@ -1030,7 +587,7 @@ public class SingleGTruth {
 			// iteration level precision recall f1
 			for (int trial = 0; trial < trials; trial++) {
 				fw_user.write(trial + "," + clusters_Discover[trial].length + "," + clusters_Ground.length + "," + String.format("%.4f",precisions_Prime[trial]) + ","
-						+ String.format("%.4f",recalls_Prime[trial]) + "," + String.format("%.4f",f1s_Prime[trial]) + "," + String.format("%.4f",ris_Prime[trial]) + "\n");
+						+ String.format("%.4f",recalls_Prime[trial]) + "," + String.format("%.4f",f1s_Prime[trial]) + "\n");
 			}
 			fw_user.write("\n");
 			fw_user.close();
@@ -1042,16 +599,28 @@ public class SingleGTruth {
 			double avgDiscoverSize = 0;
 			
 			double avgDiscoverNum = 0;
+			double avg_TP = 0;
+			double avg_FN = 0;
+			double avg_FP = 0;
+			double avg_TN = 0;
 			double avgPrecision = 0;
 			double avgRecall = 0;
 			double avgF1 = 0;
-			double avgRI = 0;
 			double avgARI = 0;
+			double avgJCC = 0;
+			double avgBALRI = 0;
+			
+			int cnt_TP = 0;
+			int cnt_FN = 0;
+			int cnt_FP = 0;
+			int cnt_TN = 0;
 			int cnt_precision = 0;
 			int cnt_recall = 0;
 			int cnt_f1 = 0;
-			int cnt_ri = 0;
 			int cnt_ari = 0;
+			int cnt_jcc = 0;
+			int cnt_balri = 0;
+			
 			// iteration level precision recall f1
 			for (int trial = 0; trial < trials; trial++) {
 				minDiscoverSize += minClusterSizes_Discover[trial];
@@ -1060,6 +629,26 @@ public class SingleGTruth {
 				avgDiscoverSize += avgClusterSizes_Discover[trial];
 				
 				avgDiscoverNum += clusters_Discover[trial].length;
+				
+				if (!Double.isNaN(ConfusionMatrix[trial][0])) {
+					avg_TP += ConfusionMatrix[trial][0];
+					cnt_TP++;
+				}
+				
+				if (!Double.isNaN(ConfusionMatrix[trial][1])) {
+					avg_FN += ConfusionMatrix[trial][1];
+					cnt_FN++;
+				}
+				
+				if (!Double.isNaN(ConfusionMatrix[trial][2])) {
+					avg_FP += ConfusionMatrix[trial][2];
+					cnt_FP++;
+				}
+				
+				if (!Double.isNaN(ConfusionMatrix[trial][3])) {
+					avg_TN += ConfusionMatrix[trial][3];
+					cnt_TN++;
+				}
 				
 				if (!Double.isNaN(precisions_Prime[trial])) {
 					avgPrecision += precisions_Prime[trial];
@@ -1076,14 +665,19 @@ public class SingleGTruth {
 					cnt_f1++;
 				}
 				
-				if (!Double.isNaN(ris_Prime[trial])) {
-					avgRI += ris_Prime[trial];
-					cnt_ri++;
-				}
-				
 				if (!Double.isNaN(aris_Prime[trial])) {
 					avgARI += aris_Prime[trial];
 					cnt_ari++;
+				}
+				
+				if (!Double.isNaN(jcc_Prime[trial])) {
+					avgJCC += jcc_Prime[trial];
+					cnt_jcc++;
+				}
+				
+				if (!Double.isNaN(balRi_Prime[trial])) {
+					avgBALRI += balRi_Prime[trial];
+					cnt_balri++;
 				}
 			}
 			minDiscoverSize /= trials;
@@ -1092,18 +686,26 @@ public class SingleGTruth {
 			avgDiscoverSize /= trials;
 			
 			avgDiscoverNum /= trials;
+			avg_TP /= cnt_TP;
+			avg_FN /= cnt_FN;
+			avg_FP /= cnt_FP;
+			avg_TN /= cnt_TN;
 			avgPrecision /= cnt_precision;
 			avgRecall /= cnt_recall;
 			avgF1 /= cnt_f1;
-			avgRI /= cnt_ri;
 			avgARI /= cnt_ari;
+			avgJCC /= cnt_jcc;
+			avgBALRI /= cnt_balri;
 			
 			fw_user.write("PRF_Prime_" + method + "\n");
 			fw_user.write(minClusterSize_Ground + "," + maxClusterSize_Ground + "," + midClusterSize_Ground+ "," + avgClusterSize_Ground + "\n");
 			fw_user.write(String.format("%.1f",minDiscoverSize) + "," + String.format("%.1f",maxDiscoverSize) + 
 					"," + String.format("%.1f",midDiscoverSize) + "," + String.format("%.1f",avgDiscoverSize) + "\n");
-			fw_user.write(String.format("%.1f",avgDiscoverNum) + "," + clusters_Ground.length + "," + String.format("%.4f",avgPrecision) + 
-					"," + String.format("%.4f",avgRecall) +  "," + String.format("%.4f",avgF1) + "," + String.format("%.4f",avgRI) + "," + String.format("%.4f",avgARI) + "\n");
+			fw_user.write(String.format("%.1f",avgDiscoverNum) + "," + clusters_Ground.length + "," + String.format("%.4f",avgF1) + 
+					"," + String.format("%.4f",avgARI) +  "," + String.format("%.4f",avgJCC) + "," + String.format("%.4f",avgBALRI) + "\n");
+			fw_user.write(String.format("%.4f",avgPrecision) + "," + String.format("%.4f",avgRecall) + "\n");
+			fw_user.write(String.format("%.4f",avg_TP) + "," + String.format("%.4f",avg_FN) + "," + String.format("%.4f",avg_FP) 
+					+ "," + String.format("%.4f",avg_TN) +  "\n");
 			fw_user.write("\n");
 			fw_user.close();
 
@@ -1230,10 +832,10 @@ public class SingleGTruth {
 		}
 	}
 	
-	public void NMI(int trials, int strategy)
+	public void NMI(int trials)
 			throws IOException, InterruptedException {
 		
-		if (!DiscoverLoaded) loadDiscover(trials, strategy);
+		if (!DiscoverLoaded) loadDiscover(trials);
 		
 		NMIs = new double[trials];
 		
@@ -1352,9 +954,9 @@ public class SingleGTruth {
 		}
 	}
 	
-	public void Purity(int trials, int strategy) throws IOException, InterruptedException {
+	public void Purity(int trials) throws IOException, InterruptedException {
 		
-		if (!DiscoverLoaded) loadDiscover(trials, strategy);
+		if (!DiscoverLoaded) loadDiscover(trials);
 		
 		Purities = new double[trials];
 		
@@ -1401,158 +1003,6 @@ public class SingleGTruth {
 		Hypergraph.garbbageCollector.gc();
 	}
 	
-	private class ARI extends Thread {
-		private int trial;
-
-		ARI(int trial) throws InterruptedException {
-			this.trial = trial;
-			start();
-		}
-
-		public void run() {
-			// refer to https://link.springer.com/content/pdf/10.1007/BF01908075.pdf
-			// or https://dl.acm.org/doi/pdf/10.1145/1281192.1281280
-			
-			int groundTruthNum = clusters_Ground.length;
-			int discoverNum = clusters_Discover[trial].length;
-
-			List<Integer>[] clusters_Discover_pointer = clusters_Discover[trial];
-			
-			double N = 0;
-			int[] clusterSize_Ground = new int[groundTruthNum];
-			for (int groundTruthIdx = 0; groundTruthIdx < groundTruthNum; groundTruthIdx++) {
-				for (int vID : clusters_Ground[groundTruthIdx]) {
-					if (vertex2Cluster_Discover[trial][vID] != -1) {
-						N++;
-						clusterSize_Ground[groundTruthIdx]++;
-					}
-				}
-			}
-			double N_2 = binomialCoe(N);
-			
-			double ni_2 = 0;
-			double ni;
-			// for each ci
-			for (int discoverIdx = 0; discoverIdx < discoverNum; discoverIdx++) {
-				ni = 0;
-				for (int vID : clusters_Discover_pointer[discoverIdx]) {
-					if (vertex2Cluster_Ground[vID] != -1) {
-						ni++;
-					}
-				}
-				ni_2 += binomialCoe(ni);
-			}
-			
-			double nj_2 = 0;
-			double nj;
-			// for each gi
-			for (int groundTruthIdx = 0; groundTruthIdx < groundTruthNum; groundTruthIdx++) {
-				nj = clusterSize_Ground[groundTruthIdx];
-				nj_2 += binomialCoe(nj);
-			}
-			
-			double nij_2 = 0;
-			double nij = 0;
-			
-			double[] counterArr;
-			// for each ci
-			for (int discoverIdx = 0; discoverIdx < discoverNum; discoverIdx++) {
-				
-				// counterArr[i] is the intersection of ci with g_j,
-				counterArr = new double[groundTruthNum];
-
-				// for each element in ci
-				for (int vID : clusters_Discover_pointer[discoverIdx]) {
-					if (vertex2Cluster_Ground[vID] != -1) {
-						counterArr[vertex2Cluster_Ground[vID]]++;
-					}
-				}
-				
-				for (int j = 0; j < counterArr.length; j++) {
-					nij = counterArr[j];
-					nij_2 += binomialCoe(nij);
-				}
-			}
- 
-			double denominator = ((ni_2 + nj_2) / 2) - ((ni_2 * nj_2) / N_2);
-			double nominator = nij_2 - ((ni_2 * nj_2) / N_2);
-			
-			if (N == 0 || N_2 == 0) ARIs[trial] = -2;
-			if (denominator == 0) ARIs[trial] = -2;
-			
-			double ari = nominator / denominator;
-			
-			if (ari <= 0) ARIs[trial] = -2;
-			else ARIs[trial] = ari;
-
-			latch.countDown();
-		}
-		
-		private double binomialCoe(double m) {
-			double m_2;
-			
-			if (m == 0 || m == 1) { 
-				m_2 = 0;
-			} else {
-				m_2 = m * (m - 1) / 2;
-			}
-
-			return m_2;
-		}
-	}
-	
-	public void ARI(int trials, int strategy) throws IOException, InterruptedException {
-		
-		if (!DiscoverLoaded) loadDiscover(trials, strategy);
-		
-		ARIs = new double[trials];
-		
-		latch = new CountDownLatch(trials);
-		for (int trial = 0; trial < trials; trial++) {
-			ARI = new ARI(trial);
-		}
-
-		latch.await();
-		
-		try {
-			// for discover clusters
-			FileWriter fw_user = new FileWriter(FilePath_Mon.filePathPre + "/measures/ARI_" + method + ".txt",true);
-			for (int trial = 0; trial < trials; trial++) {
-				fw_user.write(trial + "," + clusters_Discover[trial].length + "," + clusters_Ground.length + "," + String.format("%.4f",ARIs[trial]) + "\n");
-			}
-			fw_user.write("\n");
-			fw_user.flush();
-			fw_user.close();
-			
-			fw_user = new FileWriter(FilePath_Mon.filePathPre + "/measures/ARI.txt",true);
-			double avgDiscover = 0;
-			double avgARI = 0;
-			double cnt = 0;
-			// iteration level precision recall f1
-			for (int trial = 0; trial < trials; trial++) {
-				avgDiscover += clusters_Discover[trial].length;
-				if (ARIs[trial] > -2) {
-					avgARI += ARIs[trial];
-					cnt++;
-				}
-			}
-			avgDiscover /= trials;
-			if (cnt > 0) avgARI /= cnt;
-			else avgARI = -2;
-			fw_user.write("ARI_" + method + "\n");
-			fw_user.write(String.format("%.4f",avgDiscover) + "," + clusters_Ground.length + "," + String.format("%.4f",avgARI) + "\n");
-			fw_user.write("\n");
-			fw_user.close();
-
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-		ARIs = null;
-		Hypergraph.garbbageCollector.gc();
-	}
-	
 	private class ARI_Prime extends Thread {
 		private int trial;
 
@@ -1573,34 +1023,6 @@ public class SingleGTruth {
 			HashSet<Integer>[] groundIdxs = new HashSet[allComponents.size()];
 			double[] N_comps = new double[allComponents.size()];
 			double N_comp;
-			
-//			double[] baseArr = new double[allComponents.size()];
-//			int[] followArr = new int[allComponents.size()];
-//			int N_total = 0;
-//			for (int compID = 0; compID < allComponents.size(); compID++) {
-//				N_comp = 0;
-//				discoverIdxs[compID] = new HashSet<Integer>();
-//				groundIdxs[compID] = new HashSet<Integer>();
-//				for (int node : allComponents.get(compID)) {
-//					if (vertex2Cluster_Ground[node] != -1 && vertex2Cluster_Discover[trial][node] != -1) {
-//						N_comp++;
-//						N_total++;
-//						discoverIdxs[compID].add(vertex2Cluster_Discover[trial][node]);
-//						groundIdxs[compID].add(vertex2Cluster_Ground[node]);
-//					}
-//				}
-//				baseArr[compID] = N_comp;
-//				followArr[compID] = compID;
-//			}
-//			DoubleMergeSort Dsort = new DoubleMergeSort();
-//			Dsort.sort(baseArr, followArr);
-//			
-//			int clusterNum = (int) Math.min(Math.ceil(Math.log(N_total) / Math.log(2)), followArr.length);
-//			
-//			HashSet<Integer> validCompID = new HashSet<Integer>(clusterNum);
-//			for(int i = followArr.length - 1; i >= (followArr.length - clusterNum); i--) {
-//				validCompID.add(followArr[i]);
-//			}
 			
 			for (int compID = 0; compID < allComponents.size(); compID++) {
 				
@@ -1760,13 +1182,11 @@ public class SingleGTruth {
 		}
 	}
 	
-	public void ARI_Prime(int trials, int strategy) throws IOException, InterruptedException {
+	public void ARI_Prime(int trials) throws IOException, InterruptedException {
 		
-		if (!DiscoverLoaded) loadDiscover(trials, strategy);
+		if (!DiscoverLoaded) loadDiscover(trials);
 		
-		if (!GraphLoaded) {
-			loadgraph();
-		}
+		if (!ComponentLoaded) loadComponent();
 		
 		ARIs_Prime = new double[trials];
 		
@@ -1848,352 +1268,4 @@ public class SingleGTruth {
 		Hypergraph.garbbageCollector.gc();
 	}
 
-	private class HModularity extends Thread {
-		private int trial;
-
-		HModularity(int trial) throws InterruptedException {
-			this.trial = trial;
-			start();
-		}
-		
-		public void run() {
-			// for discovered clusters
-			int discoverNum = clusters_Discover[trial].length;
-			List<Integer>[] clusters_Discover_pointer = clusters_Discover[trial];
-			
-			// for each c1
-			double modularity = 0;
-			HashSet<Integer> nodes;
-			Iterator<Integer> itr;
-			double phi, edgeWeight, vol_c, gamma_c;
-			int edgeSize, second_idx_neighbor;
-			boolean contain;
-			for (int discoverIdx = 0; discoverIdx < discoverNum; discoverIdx++) {
-				
-				nodes = new HashSet<Integer>(clusters_Discover_pointer[discoverIdx].size());
-				for (int node : clusters_Discover_pointer[discoverIdx]) {
-					nodes.add(node);
-				}
-				
-				phi = 0;
-			    edgeSize = Hypergraph.getEdgeSize();
-			    for (int edgeID = 0; edgeID < edgeSize; edgeID++) {
-					
-			    	contain = true;
-			    	
-			    	second_idx_neighbor = Hypergraph.getSecondIdx_EINC(edgeID);
-					edgeWeight = 0;
-					for (int j = Hypergraph.EINC_head[edgeID]; j < second_idx_neighbor; j++) {
-						if (!nodes.contains(Hypergraph.EINC_nID[j])) contain = false;
-						edgeWeight += Hypergraph.EINC_weight[j];
-					}
-					
-					if (contain) phi += edgeWeight;
-			    }
-			    
-			    vol_c = 0;
-			    itr = nodes.iterator();
-			    while (itr.hasNext()) {
-			    	vol_c += node_weights[itr.next()];
-			    }
-				
-				gamma_c = gamma * vol_c;
-				modularity += (((phi + gamma_c) / totalEdgeWeight) - (gamma_c / (totalEdgeWeight - gamma_c)));
-			}
-					
-			HModularities[trial] = modularity;
-			
-			latch.countDown();
-		}
-	}
-		
-	public void HModularity(int trials, int strategy) throws IOException, InterruptedException {
-		
-		if (!DiscoverLoaded) loadDiscover(trials, strategy);
-		
-		HModularities = new double[trials];
-		
-		if (isBaseline) {
-			if (!GraphLoaded) loadgraph();
-			
-			// for discover clusters
-			latch = new CountDownLatch(trials);
-			for (int trial = 0; trial < trials; trial++) {
-				HModularity = new HModularity(trial);
-			}
-			latch.await();
-			
-		} else {
-			String line;
-			for (int trial = 0; trial < trials; trial++) {
-				try (FileReader reader = new FileReader(fileInput_discover_pre + "modularity_" + method + "_trial_" + trial + ".txt");
-						BufferedReader bufferedReader = new BufferedReader((reader))) {
-					while ((line = bufferedReader.readLine()) != null) {
-						HModularities[trial] = Double.parseDouble(line.split("\t")[1]);
-					}
-				}
-			}
-		}
-		
-		try {
-			// for discover clusters
-			FileWriter fw_user = new FileWriter(FilePath_Mon.filePathPre + "/measures/HModularity_" + method + ".txt",true);
-			for (int trial = 0; trial < trials; trial++) {
-				fw_user.write(trial + "," + clusters_Discover[trial].length + "," + clusters_Ground.length + "," + String.format("%.4f", HModularities[trial]) + "\n");
-			}
-			fw_user.write("\n");
-			fw_user.flush();
-			fw_user.close();
-			
-			fw_user = new FileWriter(FilePath_Mon.filePathPre + "/measures/HModularity.txt",true);
-			double avgDiscover = 0;
-			double avgHMod = 0;
-			// iteration level precision recall f1
-			for (int trial = 0; trial < trials; trial++) {
-				avgDiscover += clusters_Discover[trial].length;
-				avgHMod += HModularities[trial];
-			}
-			avgDiscover /= trials;
-			avgHMod /= trials;
-			fw_user.write("HModularity_" + method + "\n");
-			fw_user.write(String.format("%.4f",avgDiscover) + "," + clusters_Ground.length + "," + String.format("%.4f",avgHMod) + "\n");
-			fw_user.write("\n");
-			fw_user.close();
-
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-		HModularities = null;
-		
-		Hypergraph.garbbageCollector.gc();
-	}
-	
-	private class HConductance extends Thread {
-		private int trial;
-
-		HConductance(int trial) throws InterruptedException {
-			this.trial = trial;
-			start();
-		}
-		
-		public void run() {
-			// for discovered clusters
-			int discoverNum = clusters_Discover[trial].length;
-			List<Integer>[] clusters_Discover_pointer = clusters_Discover[trial];
-			int[] vertex2Cluster_Discover_pointer = vertex2Cluster_Discover[trial];
-			
-			double[] cond_components = new double[component_weight.length];
-			for (int i = 0; i < cond_components.length; i++) cond_components[i] = Constant.large;
-			
-			// for each c1
-			int componentID, first_idx, second_idx, u;
-			double c_s, m_s, vol_s, vol_sbar, vol_component, denominator, cond;
-			HashSet<Integer> nodeInCluster;
-			for (int discoverIdx = 0; discoverIdx < discoverNum; discoverIdx++) {
-				
-				c_s = 0;
-				m_s = 0;
-				vol_s = 0;
-				vol_sbar = 0;
-				vol_component = 0;
-				
-				componentID = component[clusters_Discover_pointer[discoverIdx].get(0)];
-				vol_component = component_weight[componentID];
-				
-				nodeInCluster = new HashSet<Integer>();
-				for (int v : clusters_Discover_pointer[discoverIdx]) {
-					nodeInCluster.add(v);
-				}
-				
-				// for each element in c1
-				for (int v : clusters_Discover_pointer[discoverIdx]) {
-							
-					vol_s += (Hypergraph.getSecondIdx_INC(v) - Hypergraph.INC_head[v]);
-					
-					int edgeID;
-					first_idx = Hypergraph.INC_head[v];
-					second_idx = Hypergraph.getSecondIdx_INC(v);
-					for (int j = first_idx; j < second_idx; j++) {
-						edgeID = Hypergraph.INC_eID[j];
-						
-						int first_idx_edge = Hypergraph.EINC_head[edgeID];
-						int second_idx_edge = Hypergraph.getSecondIdx_EINC(edgeID);
-						boolean allEdge = true;
-						for (int k = first_idx_edge; k < second_idx_edge; k++) {
-							u = Hypergraph.EINC_nID[k];
-							if (vertex2Cluster_Discover_pointer[u] != -1 && vertex2Cluster_Discover_pointer[u] != discoverIdx) {
-								allEdge = false;
-							}
-						}
-						
-						if (allEdge) m_s += 1;
-						else c_s += 1;
-					}
-				}
-				
-				vol_sbar = vol_component - vol_s;
-				
-				denominator = Math.min(vol_s, vol_sbar);
-				
-				if (denominator <= 0) {
-					continue;
-				}
-				if (c_s <= 0) {
-					continue;
-				}
-				
-				cond = c_s / denominator;
-				
-				if (cond_components[componentID] > cond) cond_components[componentID] = cond;
-			}
-			
-			double conductance = 0;
-			int cnt = 0;
-			for (int i = 0; i < cond_components.length; i++) {
-				if (cond_components[i] >= Constant.large) continue;
-				conductance += cond_components[i];
-				cnt++;
-			}
-			if (conductance == 0 || cnt == 0) conductance = 0;
-			else conductance /= cnt;
-			
-			HConductances[trial] = conductance;
-			
-			latch.countDown();
-		}
-	}
-		
-	public void HConductance(int trials, int strategy) throws IOException, InterruptedException {
-				
-		if (!DiscoverLoaded) loadDiscover(trials, strategy);
-		
-		if (!GraphLoaded) {
-			loadgraph();
-		}
-		
-		HConductances = new double[trials];
-		
-		// for discover clusters
-		latch = new CountDownLatch(trials);
-		for (int trial = 0; trial < trials; trial++) {
-			HConductance = new HConductance(trial);
-		}
-		latch.await();
-		
-		try {
-			// for discover clusters
-			FileWriter fw_user = new FileWriter(FilePath_Mon.filePathPre + "/measures/HConductance_" + method + ".txt",true);
-			for (int trial = 0; trial < trials; trial++) {
-				fw_user.write(trial + "," + clusters_Discover[trial].length + "," + clusters_Ground.length + "," + String.format("%.4f", HConductances[trial]) + "\n");
-			}
-			fw_user.write("\n");
-			fw_user.flush();
-			fw_user.close();
-			
-			fw_user = new FileWriter(FilePath_Mon.filePathPre + "/measures/HConductance.txt",true);
-			double avgDiscover = 0;
-			double avgHCond = 0;
-			int cnt = 0;
-			// iteration level precision recall f1
-			for (int trial = 0; trial < trials; trial++) {
-				avgDiscover += clusters_Discover[trial].length;
-				if (HConductances[trial] > 0) {
-					avgHCond += HConductances[trial];
-					cnt++;
-				}
-			}
-			avgDiscover /= trials;
-			avgHCond /= cnt;
-			fw_user.write("HModularity_" + method + "\n");
-			fw_user.write(String.format("%.4f",avgDiscover) + "," + clusters_Ground.length + "," + String.format("%.4f",avgHCond) + "\n");
-			fw_user.write("\n");
-			fw_user.close();
-
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-		HConductances = null;
-		
-		Hypergraph.garbbageCollector.gc();
-	}
-	
-	public static void main(String arg[]) throws IOException, InterruptedException {
-		Hypergraph.loadGraph();
-		
-		int trial_Louvain = 1;
-		String moveStrategy = "move";
-		boolean toHigherOrder = false;
-		String ordering = "randomOrder";
-		double ratio = 0.5;
-		int strategy = 0;
-		SingleGTruth calculator = new SingleGTruth(false, moveStrategy, strategy, toHigherOrder, ordering, ratio);
-		calculator.DiscoverLoaded = false;
-		calculator.GraphLoaded = false;
-//		calculator.PRF(trial_Louvain, strategy);
-		calculator.PRF_Prime(trial_Louvain, strategy);
-		calculator.NMI(trial_Louvain, strategy);
-//		calculator.Purity(trial_Louvain, strategy);
-//		calculator.ARI(trial_Louvain, strategy);
-//		calculator.ARI_Prime(trial_Louvain, strategy);
-//		calculator.HModularity(trial_Louvain, strategy);
-//		calculator.HConductance(trial_Louvain, strategy);
-		
-		System.out.println();
-		
-		int trial_BogLouvain = 1;
-		strategy = 0;
-		calculator = new SingleGTruth(true, "BogLouvain", strategy);
-		calculator.DiscoverLoaded = false;
-		calculator.GraphLoaded = false;
-//		calculator.PRF(trial_BogLouvain, strategy);
-		calculator.PRF_Prime(trial_BogLouvain, strategy);
-		calculator.NMI(trial_BogLouvain, strategy);
-//		calculator.Purity(trial_BogLouvain, strategy);
-//		calculator.ARI(trial_BogLouvain, strategy);
-//		calculator.ARI_Prime(trial_BogLouvain, strategy);
-//		calculator.HConductance(trial_BogLouvain, strategy);
-		
-		System.out.println();
-		
-		int trial_BogCNMRan = 1;
-		strategy = 0;
-		calculator = new SingleGTruth(true, "BogCNMRan", strategy);
-		calculator.DiscoverLoaded = false;
-		calculator.GraphLoaded = false;
-//		calculator.PRF(trial_BogCNMRan, strategy);
-		calculator.PRF_Prime(trial_BogCNMRan, strategy);
-		calculator.NMI(trial_BogCNMRan, strategy);
-//		calculator.Purity(trial_BogCNMRan, strategy);
-//		calculator.ARI(trial_BogCNMRan, strategy);
-//		calculator.ARI_Prime(trial_BogCNMRan, strategy);
-//		calculator.HConductance(trial_BogCNMRan, strategy);
-		
-		
-//		int trial_BogCNMRan = 30;
-//		int strategy = 2;
-//		SingleGTruth calculator = new SingleGTruth(true, "BogCNMRan", strategy);
-//		calculator.DiscoverLoaded = false;
-//		calculator.PRF(trial_BogCNMRan, strategy);
-//		calculator.NMI(trial_BogCNMRan, strategy);
-//		calculator.Purity(trial_BogCNMRan, strategy);
-//		calculator.ARI(trial_BogCNMRan, strategy);
-//		
-//		strategy = 0;
-//		calculator = new SingleGTruth(true, "BogCNMRan", strategy);
-//		calculator.DiscoverLoaded = false;
-//		calculator.HypergraphLoaded = false;
-//		calculator.HModularity(trial_BogCNMRan, strategy);
-		
-//		int trial_BogCNMOpt = 26;
-//		calculator = new SingleGTruth(true, "BogCNMOpt");
-//		calculator.DiscoverLoaded = false;
-//		calculator.PRF(trial_BogCNMOpt);
-//		calculator.NMI(trial_BogCNMOpt);
-//		calculator.Purity(trial_BogCNMOpt);
-//		calculator.ARI(trial_BogCNMOpt);
-	}
 }

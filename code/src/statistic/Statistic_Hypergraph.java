@@ -137,7 +137,7 @@ public class Statistic_Hypergraph {
 		int EINC_nID_length = Hypergraph.EINC_nID.length;
 		
 		int lastHead = 0;
-		int maxArraySize = Hypergraph.maxArraySize;
+		int maxArraySize = Constant.maxArraySize;
 		int arrayIndex = 0;
 		
 		boolean full = false;

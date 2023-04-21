@@ -1,2 +1,0 @@
-runningTime,0.01083333
-AllMemoryUse,109.26352353

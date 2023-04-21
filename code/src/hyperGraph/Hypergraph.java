@@ -20,9 +20,6 @@ public class Hypergraph {
 	private static String fileInput_inc;
 
 	public static Runtime garbbageCollector = Runtime.getRuntime();
-	public static int maxArraySize = Integer.MAX_VALUE-5; // Integer.MAX_VALUE-5;
-	public static int[] array;
-
 	// node - hyperedge matrix
 	public static int[] INC_eID;
 	public static double[] INC_weight;
@@ -33,6 +30,10 @@ public class Hypergraph {
 	public static double[] EINC_weight;
 	public static int[] EINC_head;
 
+	// others
+	public static int[] array;
+	public static int O_volG;
+	
 	//////////////////// temporal variables ////////////////////////
 
 	public static List<List<Integer>> einc_nIDs;
@@ -41,8 +42,10 @@ public class Hypergraph {
 	public static List<Integer>[] inc_eIDs; // temporal variable
 	public static List<Double>[] inc_weights; // temporal variable
 
+	// For loading a hypergraph
 	public static void loadGraph() throws IOException, InterruptedException {
-				 
+		
+		// The paths to the data files
 		if (!Constant.CONNECTED) {
 			fileInput_edge = FilePath_Mon.filePathPre + "/edge.txt";
 			fileInput_inc = FilePath_Mon.filePathPre + "/inc.txt";
@@ -52,27 +55,27 @@ public class Hypergraph {
 			fileInput_inc = FilePath_Mon.filePathPre + "/inc_connect.txt";
 		}
 
+		// extract the name of data set
 		String[] strs = FilePath_Mon.filePathPre.split("/");
 		dataset = strs[strs.length - 1];
 
 		double start = System.currentTimeMillis();
 
-		loadInc();
-
-		sortInc();
+		readFiles();	// read the data files
+		storeInc();	// store the hypergraph in the form of incident matrix
 
 		double end = System.currentTimeMillis();
-
 		double runningTime = (end - start) / Constant.RUNNING_TIME_UNIT;
-
 		String runningTime_update_print = String.format("%.2f", runningTime);
 
 		System.out.println(fileInput_edge + " data set: " + dataset + " loaded. " + "vertices: " + getVertexSize() + " edge: " + getEdgeSize()
 				+ " time: " + runningTime_update_print);
 	}
 	
+	// For loading a synthetic hypergraph
 	public static void loadsynGraph(double value, String type) throws IOException, InterruptedException {
 		
+		// The paths to the data files
 		if (!Constant.CONNECTED) {
 			fileInput_edge = FilePath_Mon.filePathPre + "/scalability/" + type + "_" + String.format("%.1f", value) + "/edge.txt";
 			fileInput_inc = FilePath_Mon.filePathPre + "/scalability/" + type + "_" + String.format("%.1f", value) + "/inc.txt";
@@ -84,26 +87,25 @@ public class Hypergraph {
 		System.out.println("fileInput_edge " + fileInput_edge);
 		System.out.println("fileInput_inc " + fileInput_inc);
 		
+		// extract the name of data set
 		String[] strs = FilePath_Mon.filePathPre.split("/");
 		dataset = strs[strs.length - 1];
 
 		double start = System.currentTimeMillis();
 
-		loadInc();
-
-		sortInc();
+		readFiles();	// read the data files
+		storeInc();	// store the hypergraph in the form of incident matrix
 
 		double end = System.currentTimeMillis();
-
 		double runningTime = (end - start) / Constant.RUNNING_TIME_UNIT;
-
 		String runningTime_update_print = String.format("%.2f", runningTime);
 
 		System.out.println(fileInput_edge + " data set: " + dataset + " loaded. " + "vertices: " + getVertexSize() + " edge: " + getEdgeSize()
 				+ " time: " + runningTime_update_print);
 	}
 
-	private static void loadInc() throws IOException {
+	// read the data files
+	private static void readFiles() throws IOException {
 		// vertex size
 		Path path = Paths.get(fileInput_inc);
 		int vertexSize = (int) Files.lines(path).count();
@@ -138,27 +140,6 @@ public class Hypergraph {
 				// 1
 				weightPerNode = Constant.INITIAL_NODEONEDGE_WEIGHT;
 				weightPerNode = weightPerNode / cardinality;
-				
-//				// sigmoid|e|
-//				weightPerNode = Math.exp(-1 * (cardinality - 2));
-//				weightPerNode = (1.0 / (weightPerNode + 1)) + 0.5;
-//				weightPerNode = weightPerNode / cardinality;
-				
-//				// log|e|
-//				weightPerNode = Math.log(cardinality) / Math.log(2);
-//				weightPerNode = weightPerNode / cardinality;
-				
-//				// |e|
-//				weightPerNode = Constant.INITIAL_NODEONEDGE_WEIGHT;
-				
-//				// |e|sigmoid|e|
-//				double exp = Math.exp(-1 * (cardinality - 2));
-//				double sigmoid = (1.0 / (exp + 1)) + 0.5;
-//				weightPerNode = sigmoid;
-				
-//				// |e|log|e|
-//				double log = Math.log(cardinality) / Math.log(2);
-//				weightPerNode = log;
 
 				for (int i = 0; i < cardinality; i++) {
 					v = Integer.parseInt(strs[i]);
@@ -178,12 +159,16 @@ public class Hypergraph {
 		}
 	}
 
-	private static void sortInc() throws InterruptedException {
+	// store the hypergraph in the form of incident matrix
+	private static void storeInc() throws InterruptedException {
 		int totalCardinality = 0;
 		for (int i = 0; i < inc_eIDs.length; i++) {
 			totalCardinality += inc_eIDs[i].size();
 		}
 
+		//////////////////////////////////////////////////////////////////
+		// node - hyperedge matrix
+		
 		INC_head = new int[inc_eIDs.length];
 		INC_eID = new int[totalCardinality];
 		INC_weight = new double[totalCardinality];
@@ -210,7 +195,8 @@ public class Hypergraph {
 		}
 
 		//////////////////////////////////////////////////////////////////
-
+		// hyperedge - node matrix
+		
 		EINC_head = new int[einc_nIDs.size()];
 
 		int hyperedgeSize = Hypergraph.getEdgeSize();
@@ -236,8 +222,32 @@ public class Hypergraph {
 			}
 		}
 
+		//////////////////////////////////////////////////////////////////
+		// estimate the upper bound of volG, to alarm the overflow incurred by the large hypergraph size
+		
+		double sum = 0;
+		int cardinality, comb;
+		for (int edgeID = 0; edgeID < hyperedgeSize; edgeID++) {
+			cardinality = einc_nIDs.get(edgeID).size();
+			comb = cardinality * (cardinality-1);
+			
+			if ((sum + comb) >= (double) (Constant.maxArraySize - 1000)) {
+				sum = Constant.maxArraySize;
+				break;
+			} else sum += comb;
+		}
+		
+		sum = Math.max(sum, getVertexSize());
+		sum = Math.max(sum, getEdgeSize());
+		
+		if (sum > (double) Constant.maxArraySize) {
+			System.out.println("Caution, it is a very large hypergraph");
+			O_volG = Constant.maxArraySize;
+		} else O_volG = (int) sum;
+		
 		///////////////////////////////////////////////////////////////////////
-
+		// clean the temporal variables
+		
 		inc_eIDs = null;
 		inc_weights = null;
 		einc_nIDs = null;
@@ -295,34 +305,34 @@ public class Hypergraph {
 	}
 
 	public static void main(String arg[]) throws IOException, InterruptedException {
-		Hypergraph.loadGraph();
-		
-		int nodeDegree;
-		int maxNodeDegree = -1;
-		for (int nodeID = 0; nodeID < Hypergraph.getVertexSize(); nodeID++) {
-			
-			int secondIdx_INC, firstIdx_INC = Hypergraph.INC_head[nodeID];
-			if (nodeID == Hypergraph.getVertexSize() - 1) secondIdx_INC = Hypergraph.INC_eID.length;
-			else secondIdx_INC = Hypergraph.INC_head[nodeID + 1];
-
-			nodeDegree = secondIdx_INC - firstIdx_INC;
-			if (maxNodeDegree < nodeDegree) maxNodeDegree = nodeDegree;
-		}
-		System.out.println("maxNodeDegree " + maxNodeDegree);
-		
-		double sumComb = 0;
-		int cardinality;
-		double comb;
-		for (int edgeID = 0; edgeID < Hypergraph.getEdgeSize(); edgeID++) {
-			
-			int secondIdx_EINC, firstIdx_EINC = Hypergraph.EINC_head[edgeID];
-			if (edgeID == Hypergraph.getEdgeSize() - 1) secondIdx_EINC = Hypergraph.EINC_nID.length;
-			else secondIdx_EINC = Hypergraph.EINC_head[edgeID + 1];
-			
-			cardinality = secondIdx_EINC - firstIdx_EINC;
-			comb = Functions.combination(cardinality, 2);
-			sumComb += comb;
-		}
-		System.out.println("sumComb " + sumComb);
+//		Hypergraph.loadGraph();
+//		
+//		int nodeDegree;
+//		int maxNodeDegree = -1;
+//		for (int nodeID = 0; nodeID < Hypergraph.getVertexSize(); nodeID++) {
+//			
+//			int secondIdx_INC, firstIdx_INC = Hypergraph.INC_head[nodeID];
+//			if (nodeID == Hypergraph.getVertexSize() - 1) secondIdx_INC = Hypergraph.INC_eID.length;
+//			else secondIdx_INC = Hypergraph.INC_head[nodeID + 1];
+//
+//			nodeDegree = secondIdx_INC - firstIdx_INC;
+//			if (maxNodeDegree < nodeDegree) maxNodeDegree = nodeDegree;
+//		}
+//		System.out.println("maxNodeDegree " + maxNodeDegree);
+//		
+//		double sumComb = 0;
+//		int cardinality;
+//		double comb;
+//		for (int edgeID = 0; edgeID < Hypergraph.getEdgeSize(); edgeID++) {
+//			
+//			int secondIdx_EINC, firstIdx_EINC = Hypergraph.EINC_head[edgeID];
+//			if (edgeID == Hypergraph.getEdgeSize() - 1) secondIdx_EINC = Hypergraph.EINC_nID.length;
+//			else secondIdx_EINC = Hypergraph.EINC_head[edgeID + 1];
+//			
+//			cardinality = secondIdx_EINC - firstIdx_EINC;
+//			comb = Functions.combination(cardinality, 2);
+//			sumComb += comb;
+//		}
+//		System.out.println("sumComb " + sumComb);
 	}
 }

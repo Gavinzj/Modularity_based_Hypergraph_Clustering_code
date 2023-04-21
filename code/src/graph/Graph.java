@@ -69,8 +69,8 @@ public class Graph {
 						end = u;
 					}
 					
-					if (!distinctEdges.containsKey(u + "-" + v)) {
-						distinctEdges.put(u + "-" + v, edgeID);
+					if (!distinctEdges.containsKey(head + "-" + end)) {
+						distinctEdges.put(head + "-" + end, edgeID);
 						weights.add(edgeWeight);
 						
 						inc_eIDs[head].add(edgeID);
@@ -82,7 +82,7 @@ public class Graph {
 						edgeID++;
 						
 					} else {
-						int idx = distinctEdges.get(u + "-" + v);
+						int idx = distinctEdges.get(head + "-" + end);
 						double newWeight = weights.get(idx) + edgeWeight;
 						weights.set(idx, newWeight);
 					}

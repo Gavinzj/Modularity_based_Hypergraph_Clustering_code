@@ -11,14 +11,17 @@ import hyperGraph.Hypergraph;
 import utilities.Constant;
 import utilities.FilePath_Mon;
 
+//calculate the running time of PIC algorithm with optimization techniques 1 and 2
+//Note: on the hypergraphs with very large sizes, use
+//1) call constructADJ_largeGraph() in initPart1() and pic() to construct the adjacent list
+//2) call move_split_largeGraph() in pic() to move a node 
 public class PIC_prune12_speed {
 
 	int trial;
 	double ratio;
-	boolean toHigherOrder;
 	String ordering;
 
-	double increasePerPass;
+	double incPerIteration;
 	int n_aggregations = 10;
 
 	double lambda;
@@ -58,7 +61,7 @@ public class PIC_prune12_speed {
 	int[] largeEndNode;
 
 	// variables for move
-	int round;
+	int iteration;
 	boolean[] visited;
 	double[] fractions;
 	int[] incident_clusteridxs;
@@ -85,39 +88,25 @@ public class PIC_prune12_speed {
 	double[] self_loop_weights;
 	int new_n;
 
-	// variables for updateGamma
-	Process process;
-
-	// count-min sketch
-	boolean useSketch = true;
-
+	boolean usePruning = true;
 	boolean save;
-	String moveStrategy;
 	String dataset;
 
-	public PIC_prune12_speed(int trial, boolean toHigherOrder, String ordering, double ratio,
+	public PIC_prune12_speed(int trial, String ordering, double ratio,
 			boolean save) throws IOException {
 		this.trial = trial;
-		this.toHigherOrder = toHigherOrder;
 		this.ordering = ordering;
 		this.ratio = ratio;
 		this.save = save;
 		this.dataset = Hypergraph.dataset;
-	}
-
-	public PIC_prune12_speed(int trial, boolean toHigherOrder, String ordering, double ratio,
-			double lambda, boolean save) throws IOException {
-		this.trial = trial;
-		this.toHigherOrder = toHigherOrder;
-		this.ordering = ordering;
-		this.ratio = ratio;
-		this.save = save;
-		this.dataset = Hypergraph.dataset;
-		this.lambda = lambda;
 	}
 
 	public void initPart1() {
-
+		
+		// initialize the program by 
+		// 1) copying the hypergraph in a form of incident matrix and,
+		// 2) constructing the adjacent list
+		
 		n = Hypergraph.getVertexSize();
 		endN = n - 1;
 		m = Hypergraph.getEdgeSize();
@@ -133,31 +122,37 @@ public class PIC_prune12_speed {
 			INC_head[i] = Hypergraph.INC_head[i];
 		}
 
-		int cardinality = Hypergraph.EINC_nID.length;
-		EINC_nID = new int[cardinality];
-		EINC_weight = new double[cardinality];
-		INC_eID = new int[cardinality];
-		INC_weight = new double[cardinality];
-		for (int i = 0; i < cardinality; i++) {
+		int totalCardinality = Hypergraph.EINC_nID.length;
+		EINC_nID = new int[totalCardinality];
+		EINC_weight = new double[totalCardinality];
+		INC_eID = new int[totalCardinality];
+		INC_weight = new double[totalCardinality];
+		for (int i = 0; i < totalCardinality; i++) {
 			EINC_nID[i] = Hypergraph.EINC_nID[i];
 			EINC_weight[i] = Hypergraph.EINC_weight[i];
 			INC_eID[i] = Hypergraph.INC_eID[i];
 			INC_weight[i] = Hypergraph.INC_weight[i];
 		}
 
-		EINC_nID_length = cardinality;
-		INC_eID_length = cardinality;
+		EINC_nID_length = totalCardinality;
+		INC_eID_length = totalCardinality;
 
 		// variables for move
 		visited = new boolean[n];
-		constructADJ(true);
-//		constructADJ_largeGraph(true);
+		
+		// construct the adjacent list 
+		constructADJ(true);		// uncomment this for normal-sized hypergraph
+//		constructADJ_largeGraph(true);	// uncomment this for very large hypergraph
 	}
 
 	public double initPart2() {
 		
-//		if (!getGamma(m)) System.out.println("error!");
-				
+		// initialize the program by 
+		// 1) calculating the gamma of the initial hypergraph
+		// 2) calculating the node degrees and edge weights
+		// 3) initializing the variables for later computations
+		
+		// calculate gamma
 		double timeUpdateGamma = calculateGamma();
 		double runningTime = (timeUpdateGamma * Constant.RUNNING_TIME_UNIT);
 
@@ -219,13 +214,9 @@ public class PIC_prune12_speed {
 			cluster_volume[i] += node_degrees[i];
 		}
 
-		if (toHigherOrder) {
-			nodePriority = new int[n];
-		}
-
 		///////////////////////////////////////////////////////////////////////////////
 
-		if (useSketch) {
+		if (usePruning) {
 			NS_construct();
 			ES_construct();
 		}
@@ -237,10 +228,10 @@ public class PIC_prune12_speed {
 
 	public void move_split_prune12(int thisNode) {
 
+		// current cluster of the node
 		int thisCluster = clusters[thisNode];
 
-//		System.out.println("move node " + thisNode + "(" + thisCluster + ")");
-
+		// adjacent list of the node
 		int secondIdx_ADJ;
 		if (thisNode == endN) secondIdx_ADJ = ADJ_nID_length;
 		else secondIdx_ADJ = ADJ_head[thisNode + 1];
@@ -251,7 +242,8 @@ public class PIC_prune12_speed {
 		int possibleNeighborClusterNum = 0;
 		int impossibleNeighborClusterNum = 0;
 		
-		if (round > 1) {
+		// find the neighbor clusters (using optimization technique 1)
+		if (iteration > 1) {
 			if ((curTimeStamp - lastChangeTimes[thisCluster]) > n) {
 				// add cluster of thisNode
 				clusterIdxs[thisCluster] = distinctNeighborClusterNum++;
@@ -311,6 +303,7 @@ public class PIC_prune12_speed {
 			}
 		}
 		
+		// if all neighbor clusters are the same as the current cluster
 		if (distinctNeighborClusterNum == 1) {
 			clusterIdxs[thisCluster] = -1;
 			
@@ -325,6 +318,7 @@ public class PIC_prune12_speed {
 		if (thisNode == endN) secondIdx_INC = INC_eID_length;
 		else secondIdx_INC = INC_head[thisNode + 1];
 
+		// calculate the delta support (using optimization technique 2)
 		int edge, node, clusterIdx, secondIdx;
 		double thisWeight, edgeWeight;
 		double maxFraction, fraction_cNotu;
@@ -407,22 +401,27 @@ public class PIC_prune12_speed {
 			}
 		}
 		
-		// try removing from original cluster
-		double vol_cu, one_minus_gammaExpect_cu;
+		// try removing the node from current cluster
+		double eta_cu, delta_eta_cu;
 		double vol_c = cluster_volume[thisCluster];
 		double thisDegree = node_degrees[thisNode];
-		double vol_cNou = vol_c - thisDegree;
-		double one_minus_gammaExpect_cNou = 1 - (gamma * ((((vol_cNou / totalEdgeWeight) - 1) * ratio) + 1));
-		double one_minus_gammaExpect_c = 1 - (gamma * ((((vol_c / totalEdgeWeight) - 1) * ratio) + 1));
-		double eta_short = (1.0 / one_minus_gammaExpect_cNou) - (1 / one_minus_gammaExpect_c);
+		
+		double CC = 1.0 - gamma;
+		double oneMinusGamma = 1.0 - gamma;
+		
+		double eta_cNou = ratio * (1.0 - ((vol_c - thisDegree) / totalEdgeWeight));
+		double delta_eta_cNou = (1.0 - eta_cNou) * (1.0 - eta_cNou) / (oneMinusGamma + (gamma * eta_cNou));
+		double eta_c = ratio * (1.0 - (vol_c / totalEdgeWeight));
+		double delta_eta_c = (1.0 - eta_c) * (1.0 - eta_c) / (oneMinusGamma + (gamma * eta_c));
 		
 		clusterIdx = clusterIdxs[thisCluster];
 		clusterIdxs[thisCluster] = -1;
-		double incident_weight = incident_weights[clusterIdx];
-		incident_weights[clusterIdx] = 0;
-		double deltaQ_exit_short = (incident_weight / totalEdgeWeight) + eta_short;
+//		double deltaQ_exit_short = (incident_weight / totalEdgeWeight) + eta_short;
+		double deltaQ_exit_short = (incident_weights[clusterIdx] / totalEdgeWeight) + CC * (delta_eta_cNou - delta_eta_c);	
+		incident_weights[clusterIdx] = 0;	
 		deltaQ_exit_short = -1 * deltaQ_exit_short;
 
+		// try merging the node to each of its distinct neighbor clusters
 		int targetClusterID;
 		double deltaQ_short, deltaQ_local_short;
 		int best_targetCluster = thisCluster;
@@ -432,19 +431,20 @@ public class PIC_prune12_speed {
 			targetClusterID = possibleNeighborClusters[i];
 			if (thisCluster == targetClusterID) continue;
 
-//			System.out.println("move to cluster " + targetClusterID);
-
 			vol_c = cluster_volume[targetClusterID];
-			vol_cu = thisDegree + vol_c;
-			one_minus_gammaExpect_c = 1 - (gamma * ((((vol_c / totalEdgeWeight) - 1) * ratio) + 1)); 
-			one_minus_gammaExpect_cu = 1 - (gamma * ((((vol_cu / totalEdgeWeight) - 1) * ratio) + 1)); 
-			eta_short = (1.0 / one_minus_gammaExpect_c) - (1 / one_minus_gammaExpect_cu);
+			
+			eta_c = ratio * (1.0 - (vol_c / totalEdgeWeight));
+			delta_eta_c = (1.0 - eta_c) * (1.0 - eta_c) / (oneMinusGamma + (gamma * eta_c));
+			eta_cu = ratio * (1.0 - ((thisDegree + vol_c) / totalEdgeWeight));
+			delta_eta_cu = (1.0 - eta_cu) * (1.0 - eta_cu) / (oneMinusGamma + (gamma * eta_cu));
 
 			clusterIdx = clusterIdxs[targetClusterID];
 			clusterIdxs[targetClusterID] = -1;
-			deltaQ_short = (incident_weights[clusterIdx] / totalEdgeWeight) + eta_short;
+//			deltaQ_short = (incident_weights[clusterIdx] / totalEdgeWeight) + eta_short;
+			deltaQ_short = (incident_weights[clusterIdx] / totalEdgeWeight) + CC * (delta_eta_c - delta_eta_cu);
 			incident_weights[clusterIdx] = 0;
 			deltaQ_local_short = deltaQ_short + deltaQ_exit_short;
+			
 			if (deltaQ_local_short > deltaQ_best) {
 				deltaQ_best = deltaQ_local_short;
 				best_targetCluster = targetClusterID;
@@ -460,43 +460,39 @@ public class PIC_prune12_speed {
 			}
 		}
 
+		// if there is positive modularity gain, change the clustering
 		if (deltaQ_best > 0 && best_targetCluster != thisCluster) {
 			// decide to move
-			increasePerPass += deltaQ_best;
+			incPerIteration += deltaQ_best;
 			cluster_volume[thisCluster] -= thisDegree;
 			cluster_volume[best_targetCluster] += thisDegree;
 			clusters[thisNode] = best_targetCluster;
 			
 			lastChangeTimes[thisCluster] = curTimeStamp;
 			lastChangeTimes[best_targetCluster] = curTimeStamp;
-//            System.out.println("new cluster of " + thisNode + " is " + clusters[thisNode]);
 
 			for (int i = firstIdx_INC; i < secondIdx_INC; i++) {
 				edge = INC_eID[i];
 				maxFractionChanges[edge] += INC_weight[i];
 			}
-
-//            System.out.println("=====================\n");
 			
             return;
-//            return "";
 		}
 
-//		System.out.println("=====================\n");
-		
 		return;
 	}
 
 	public void move_split_prune12_largeGraph(int thisNode) {
 
+		// current cluster of the node
 		int thisCluster = clusters[thisNode];
-
-//		System.out.println("move node " + thisNode + "(" + thisCluster + ")");
 
 		int split = largeSplit[thisNode];
 		int endNode = largeEndNode[split];
 		
+		// adjacent list of the node
 		int secondIdx_ADJ;
+		int firstIdx_ADJ = largeADJ_head[split][thisNode];
 		if (thisNode == endNode) secondIdx_ADJ = largeADJ_nID_length[split];
 		else secondIdx_ADJ = largeADJ_head[split][thisNode + 1];
 
@@ -506,15 +502,15 @@ public class PIC_prune12_speed {
 		int possibleNeighborClusterNum = 0;
 		int impossibleNeighborClusterNum = 0;
 		
-		if (round > 1) {
+		// find the neighbor clusters (using optimization technique 1)
+		if (iteration > 1) {
 			if ((curTimeStamp - lastChangeTimes[thisCluster]) > n) {
 				// add cluster of thisNode
 				clusterIdxs[thisCluster] = distinctNeighborClusterNum++;
-				visited[thisCluster] = true;
 				// add cluster of adjacent neighbors
-				for (int i = largeADJ_head[split][thisNode]; i < secondIdx_ADJ; i++) {
+				for (int i = firstIdx_ADJ; i < secondIdx_ADJ; i++) {
 					cluster = clusters[largeADJ_nID[split][i]];
-					if (!visited[cluster]) {
+					if (clusterIdxs[cluster] == -1) {
 						
 						if ((curTimeStamp - lastChangeTimes[cluster]) > n) {
 							impossibleNeighborClusters[impossibleNeighborClusterNum++] = cluster;
@@ -523,7 +519,6 @@ public class PIC_prune12_speed {
 						}
 						
 						clusterIdxs[cluster] = distinctNeighborClusterNum++;
-						visited[cluster] = true;
 					}
 				}
 				
@@ -531,19 +526,10 @@ public class PIC_prune12_speed {
 				
 				if (possibleNeighborClusterNum > 0) {
 					// canSkip = false;
-					visited[thisCluster] = false;
-					for (int i = 0; i < impossibleNeighborClusterNum; i++) {
-						visited[impossibleNeighborClusters[i]] = false;
-					}
-					for (int i = 0; i < possibleNeighborClusterNum; i++) {
-						visited[possibleNeighborClusters[i]] = false;
-					}
 				} else {
-					visited[thisCluster] = false;
 					clusterIdxs[thisCluster] = -1;
 					for (int i = 0; i < impossibleNeighborClusterNum; i++) {
 						cluster = impossibleNeighborClusters[i];
-						visited[cluster] = false;
 						clusterIdxs[cluster] = -1;
 					}
 					
@@ -553,18 +539,13 @@ public class PIC_prune12_speed {
 				// add cluster of thisNode
 				possibleNeighborClusters[possibleNeighborClusterNum++] = thisCluster;
 				clusterIdxs[thisCluster] = distinctNeighborClusterNum++;
-				visited[thisCluster] = true;
 				// add cluster of adjacent neighbors
-				for (int i = largeADJ_head[split][thisNode]; i < secondIdx_ADJ; i++) {
+				for (int i = firstIdx_ADJ; i < secondIdx_ADJ; i++) {
 					cluster = clusters[largeADJ_nID[split][i]];
-					if (!visited[cluster]) {
+					if (clusterIdxs[cluster] == -1) {
 						possibleNeighborClusters[possibleNeighborClusterNum++] = cluster;
 						clusterIdxs[cluster] = distinctNeighborClusterNum++;
-						visited[cluster] = true;
 					}
-				}
-				for (int i = 0; i < possibleNeighborClusterNum; i++) {
-					visited[possibleNeighborClusters[i]] = false;
 				}
 			}
 			
@@ -572,21 +553,17 @@ public class PIC_prune12_speed {
 			// add cluster of thisNode
 			possibleNeighborClusters[possibleNeighborClusterNum++] = thisCluster;
 			clusterIdxs[thisCluster] = distinctNeighborClusterNum++;
-			visited[thisCluster] = true;
 			// add cluster of adjacent neighbors
-			for (int i = largeADJ_head[split][thisNode]; i < secondIdx_ADJ; i++) {
+			for (int i = firstIdx_ADJ; i < secondIdx_ADJ; i++) {
 				cluster = clusters[largeADJ_nID[split][i]];
-				if (!visited[cluster]) {
+				if (clusterIdxs[cluster] == -1) {
 					possibleNeighborClusters[possibleNeighborClusterNum++] = cluster;
 					clusterIdxs[cluster] = distinctNeighborClusterNum++;
-					visited[cluster] = true;
 				}
-			}
-			for (int i = 0; i < possibleNeighborClusterNum; i++) {
-				visited[possibleNeighborClusters[i]] = false;
 			}
 		}
 		
+		// if all neighbor clusters are the same as the current cluster
 		if (distinctNeighborClusterNum == 1) {
 			clusterIdxs[thisCluster] = -1;
 			
@@ -601,6 +578,7 @@ public class PIC_prune12_speed {
 		if (thisNode == endN) secondIdx_INC = INC_eID_length;
 		else secondIdx_INC = INC_head[thisNode + 1];
 
+		// calculate the delta support (using optimization technique 2)
 		int edge, node, clusterIdx, secondIdx;
 		double thisWeight, edgeWeight;
 		double maxFraction, fraction_cNotu;
@@ -611,7 +589,6 @@ public class PIC_prune12_speed {
 			thisWeight = INC_weight[i];
 			edgeWeight = edge_weights[edge];
 
-			// maxRatioLazy_c = (thisWeight + maxFractionsLazy[edge] + maxFractionChanges[edge]) / edgeWeight;
 			if ((thisWeight + maxFractionsLazy[edge] + maxFractionChanges[edge]) / edgeWeight < ratio) continue;
 
 			// for each node in the edge
@@ -646,7 +623,6 @@ public class PIC_prune12_speed {
 				maxFractionsLazy[edge] = maxFraction;
 				maxFractionChanges[edge] = 0;
 
-				// maxRatio_c = (thisWeight + maxFractionsLazy[edge]) / edgeWeight;
 				if ((thisWeight + maxFractionsLazy[edge]) / edgeWeight < ratio) {
 					for (int j = 0; j < incident_clusterNum; j++) {
 						clusterIdx = incident_clusteridxs[j];
@@ -683,22 +659,27 @@ public class PIC_prune12_speed {
 			}
 		}
 		
-		// try removing from original cluster
-		double vol_cu, one_minus_gammaExpect_cu;
+		// try removing the node from current cluster
+		double eta_cu, delta_eta_cu;
 		double vol_c = cluster_volume[thisCluster];
 		double thisDegree = node_degrees[thisNode];
-		double vol_cNou = vol_c - thisDegree;
-		double one_minus_gammaExpect_cNou = 1 - (gamma * ((((vol_cNou / totalEdgeWeight) - 1) * ratio) + 1));
-		double one_minus_gammaExpect_c = 1 - (gamma * ((((vol_c / totalEdgeWeight) - 1) * ratio) + 1));
-		double eta_short = (1.0 / one_minus_gammaExpect_cNou) - (1 / one_minus_gammaExpect_c);
+		
+		double CC = 1.0 - gamma;
+		double oneMinusGamma = 1.0 - gamma;
+		
+		double eta_cNou = ratio * (1.0 - ((vol_c - thisDegree) / totalEdgeWeight));
+		double delta_eta_cNou = (1.0 - eta_cNou) * (1.0 - eta_cNou) / (oneMinusGamma + (gamma * eta_cNou));
+		double eta_c = ratio * (1.0 - (vol_c / totalEdgeWeight));
+		double delta_eta_c = (1.0 - eta_c) * (1.0 - eta_c) / (oneMinusGamma + (gamma * eta_c));
 		
 		clusterIdx = clusterIdxs[thisCluster];
 		clusterIdxs[thisCluster] = -1;
-		double incident_weight = incident_weights[clusterIdx];
-		incident_weights[clusterIdx] = 0;
-		double deltaQ_exit_short = (incident_weight / totalEdgeWeight) + eta_short;
+//		double deltaQ_exit_short = (incident_weight / totalEdgeWeight) + eta_short;
+		double deltaQ_exit_short = (incident_weights[clusterIdx] / totalEdgeWeight) + CC * (delta_eta_cNou - delta_eta_c);	
+		incident_weights[clusterIdx] = 0;	
 		deltaQ_exit_short = -1 * deltaQ_exit_short;
 
+		// try merging the node to each of its distinct neighbor clusters
 		int targetClusterID;
 		double deltaQ_short, deltaQ_local_short;
 		int best_targetCluster = thisCluster;
@@ -708,19 +689,20 @@ public class PIC_prune12_speed {
 			targetClusterID = possibleNeighborClusters[i];
 			if (thisCluster == targetClusterID) continue;
 
-//			System.out.println("move to cluster " + targetClusterID);
-
 			vol_c = cluster_volume[targetClusterID];
-			vol_cu = thisDegree + vol_c;
-			one_minus_gammaExpect_c = 1 - (gamma * ((((vol_c / totalEdgeWeight) - 1) * ratio) + 1)); 
-			one_minus_gammaExpect_cu = 1 - (gamma * ((((vol_cu / totalEdgeWeight) - 1) * ratio) + 1)); 
-			eta_short = (1.0 / one_minus_gammaExpect_c) - (1 / one_minus_gammaExpect_cu);
+			
+			eta_c = ratio * (1.0 - (vol_c / totalEdgeWeight));
+			delta_eta_c = (1.0 - eta_c) * (1.0 - eta_c) / (oneMinusGamma + (gamma * eta_c));
+			eta_cu = ratio * (1.0 - ((thisDegree + vol_c) / totalEdgeWeight));
+			delta_eta_cu = (1.0 - eta_cu) * (1.0 - eta_cu) / (oneMinusGamma + (gamma * eta_cu));
 
 			clusterIdx = clusterIdxs[targetClusterID];
 			clusterIdxs[targetClusterID] = -1;
-			deltaQ_short = (incident_weights[clusterIdx] / totalEdgeWeight) + eta_short;
+//			deltaQ_short = (incident_weights[clusterIdx] / totalEdgeWeight) + eta_short;
+			deltaQ_short = (incident_weights[clusterIdx] / totalEdgeWeight) + CC * (delta_eta_c - delta_eta_cu);
 			incident_weights[clusterIdx] = 0;
 			deltaQ_local_short = deltaQ_short + deltaQ_exit_short;
+			
 			if (deltaQ_local_short > deltaQ_best) {
 				deltaQ_best = deltaQ_local_short;
 				best_targetCluster = targetClusterID;
@@ -736,61 +718,38 @@ public class PIC_prune12_speed {
 			}
 		}
 
+		// if there is positive modularity gain, change the clustering
 		if (deltaQ_best > 0 && best_targetCluster != thisCluster) {
 			// decide to move
-			increasePerPass += deltaQ_best;
+			incPerIteration += deltaQ_best;
 			cluster_volume[thisCluster] -= thisDegree;
 			cluster_volume[best_targetCluster] += thisDegree;
 			clusters[thisNode] = best_targetCluster;
 			
 			lastChangeTimes[thisCluster] = curTimeStamp;
 			lastChangeTimes[best_targetCluster] = curTimeStamp;
-//            System.out.println("new cluster of " + thisNode + " is " + clusters[thisNode]);
 
 			for (int i = firstIdx_INC; i < secondIdx_INC; i++) {
 				edge = INC_eID[i];
 				maxFractionChanges[edge] += INC_weight[i];
 			}
-
-//            System.out.println("=====================\n");
 			
             return;
 		}
 
-//		System.out.println("=====================\n");
-		
 		return;
 	}
 
-	public double adjustWeight_AON(double edgeWeight, double thisRatio) {
-		if (thisRatio >= 1.0) return edgeWeight;
-		return 0;
-	}
-
 	public double adjustWeight_LinearLog(double edgeWeight, double thisRatio) {
-		double log = Math.log((1.0 / thisRatio) + 1) / Math.log(2);
-		double linear_log = thisRatio * (1.0 / log);
-
-		return edgeWeight * linear_log;
-	}
-
-	public double adjustWeight_Sigmoid(double edgeWeight, double thisRatio) {
-		double exp = Math.exp(1 - (1.0 / thisRatio));
-		double sigmod = 2 * ((1.0 / (1 + exp)) - 0.5);
-
-		return edgeWeight * (1 - sigmod);
-	}
-
-	public double adjustWeight_Quadratic(double edgeWeight, double thisRatio) {
-		double fractionPow = Math.pow(thisRatio, 2);
-		return edgeWeight * fractionPow;
+		return edgeWeight * thisRatio * Math.log(2) / Math.log((1.0 / thisRatio) + 1);
 	}
 
 	public void rebuildGraph(boolean firstReConstruct) {
 
 		int arrayIndex = 0;
 
-		new_n = 0; // the number of nodes in new hypergraph
+		// re-label the clusters, calculate the number of nodes in new hypergraph
+		new_n = 0;
 		int cluster;
 		for (int node = 0; node < n; node++) {
 			cluster = clusters[node];
@@ -801,6 +760,7 @@ public class PIC_prune12_speed {
 			}
 		}
 
+		// initialize the variables for graph compression
 		if (firstReConstruct) {
 			nodesInCluster = new ArrayList[new_n];
 			newINC_eIDs = new ArrayList[new_n];
@@ -815,6 +775,7 @@ public class PIC_prune12_speed {
 			node_degrees[i] = 0;
 		}
 
+		// group the nodes in each cluster
 		for (int node = 0; node < n; node++) {
 			cluster = clusterIdxs[clusters[node]];
 			clusters[node] = cluster;
@@ -835,7 +796,7 @@ public class PIC_prune12_speed {
 			}
 		}
 
-		// store the nodes and their weights in each hyperedge
+		// get the hyperedges in the compressed graph
 		int newEINC_headArrIndex = 0;
 		int newEINC_nIDArrIndex = 0;
 		int newEINC_weightArrIndex = 0;
@@ -863,6 +824,7 @@ public class PIC_prune12_speed {
 				cluster_weights[cluster] += EINC_weight[i];
 			}
 
+			// if the hyperedge contains more than one distinct new nodes
 			if (arrayIndex > 1) {
 				newEINC_head[newEINC_headArrIndex++] = edge_head;
 
@@ -876,7 +838,7 @@ public class PIC_prune12_speed {
 
 					node_degrees[c] += weight;
 
-					// new node "cluster" has incident hyperedge with ID "head"
+					// new node "c" has incident hyperedge with ID "edgeCnt"
 					newINC_eIDs[c].add(edgeCnt);
 					newINC_weights[c].add(weight);
 
@@ -885,10 +847,10 @@ public class PIC_prune12_speed {
 					edge_head++;
 				}
 
-				// new node set in hyperedge with ID "edgeCnt"
 				edgeCnt++;
 
 			} else {
+				// if the hyperedge contains only one distinct new node
 				cluster = Hypergraph.array[0];
 				clusterIdxs[cluster] = -1;
 
@@ -909,7 +871,7 @@ public class PIC_prune12_speed {
 
 				node_degrees[cluster] += self_loop_weight;
 
-				// new node "clusterID" has incident hyperedge with ID "head"
+				// new node "cluster" has incident hyperedge with ID "edgeCnt"
 				newINC_eIDs[cluster].add(edgeCnt);
 				newINC_weights[cluster].add(self_loop_weight);
 				edgeCnt++;
@@ -978,22 +940,13 @@ public class PIC_prune12_speed {
 				node_head++;
 			}
 		}
-
-//        // check correctness
-//		double totalNodeDegree = 0;
-// 		for (int i = 0; i < n; i++) totalNodeDegree += node_degrees[i];
-//		double totalNode_weights = 0;
-// 		for (int i = 0; i < INC_eID_length; i++) totalNode_weights += INC_weight[i];
-//		double totalEdge_weights = 0;
-// 		for (int i = 0; i < EINC_nID_length; i++) totalEdge_weights += EINC_weight[i];
-//		double totalWeights = 0;
-// 		for (int i = 0; i < m; i++) totalWeights += edge_weights[i];
-//		System.out.println("# new nodes " + n + " # of new hyperedges " + m + " Q_curr " + Q_curr + " total weight "
-//				+ totalNodeDegree + " " + totalNode_weights + " " + totalEdge_weights + " " + totalWeights);
 	}
 
 	public void constructADJ(boolean firstConstruct) {
 
+		// construct the adjacent list 
+		
+		// initialize the variables for constructing the adjacent list
 		int lastHead = 0;
 		int head = 0;
 		int arrayIndex = 0;
@@ -1001,6 +954,7 @@ public class PIC_prune12_speed {
 			ADJ_head = new int[n];
 		}
 
+		// for each node
 		int maxDegree = -1;
 		int secondIdx_INC, secondIdx_EINC, edgeID, neighbor, degree;
 		for (int thisNode = 0; thisNode < n; thisNode++) {
@@ -1042,12 +996,13 @@ public class PIC_prune12_speed {
 		if (firstConstruct || arrayIndex > ADJ_nID.length) ADJ_nID = new int[arrayIndex];
 		ADJ_nID_length = arrayIndex;
 		
+		// store the adjacent list
 		for (int i = 0; i < arrayIndex; i++) {
 			ADJ_nID[i] = Hypergraph.array[i];
 		}
-		
-//		System.out.println("totVol " + ADJ_nID_length + " maxDegree " + maxDegree);
 
+		// initialize the variables for the later node move using the information of 
+		// the maximum number of adjacent neighbor
 		if (firstConstruct || (maxDegree + 1) > fractions.length) {
 			fractions = new double[maxDegree + 1];
 			incident_clusteridxs = new int[maxDegree + 1];
@@ -1059,12 +1014,17 @@ public class PIC_prune12_speed {
 	
 	public void constructADJ_largeGraph(boolean firstConstruct) {
 		
+		// construct the adjacency matrix 
+		// for a very large hypergraph, the adjacent list needs to be splitted into
+		// several smaller one
+		
 		int maxSplitNum = 32;
 		System.out.println("#constructADJ_largeGraph");
 		
+		// initialize the variables for constructing the adjacent list
 		byte splitCnt = 0;
 		int lastHead = 0;
-		int maxArraySize = Hypergraph.maxArraySize;
+		int maxArraySize = Constant.maxArraySize;
 		int arrayIndex = 0;
 		if (firstConstruct) {
 			largeSplit = new byte[n];
@@ -1076,6 +1036,7 @@ public class PIC_prune12_speed {
 			largeADJ_head[splitCnt] = new int[n];
 		}
 		
+		// for each node
 		boolean full = false;
 		int maxDegree = -1;
 		int secondIdx_INC, secondIdx_EINC, edgeID, neighbor, degree;
@@ -1151,8 +1112,6 @@ public class PIC_prune12_speed {
 				degree = arrayIndex - lastHead;
 				if (maxDegree < degree) maxDegree = degree;
 				
-//				System.out.println("node " + thisNode + " split " + largeSplit[thisNode] + " node size " + nodeSize + " degree " + degree);
-				
 				for (int i = lastHead; i < arrayIndex; i++) {
 					visited[Hypergraph.array[i]] = false;
 				}
@@ -1165,6 +1124,8 @@ public class PIC_prune12_speed {
 		if (firstConstruct || arrayIndex > largeADJ_nID[splitCnt].length) {
 			largeADJ_nID[splitCnt] = new int[arrayIndex];
 		}
+		
+		// store the adjacent list
 		largeADJ_nID_length[splitCnt] = arrayIndex;
 		for (int i = 0; i < arrayIndex; i++) {
 			largeADJ_nID[splitCnt][i] = Hypergraph.array[i];
@@ -1175,10 +1136,11 @@ public class PIC_prune12_speed {
 		long totVol = 0;
 		for (int split = 0; split <= splitCnt; split++) {
 			totVol += largeADJ_nID_length[split];
-//			System.out.println("split " + split + " largeADJ_nID_length[split] " + largeADJ_nID_length[split]);
 		}
 		System.out.println("totVol " + totVol + " maxDegree " + maxDegree);
 		
+		// initialize the variables for the later node move using the information of 
+		// the maximum number of adjacent neighbor
 		if (firstConstruct || (maxDegree + 1) > fractions.length) {
 			fractions = new double[maxDegree + 1];
 			incident_clusteridxs = new int[maxDegree + 1];
@@ -1188,50 +1150,41 @@ public class PIC_prune12_speed {
 		}
 	}
 
-	public String louvain(String moveStrategy) throws Exception {
+	public String pic() throws Exception {
 
+		// PIC follows the Louvain-style framework that iteratively maximizes the PI modularity
+		
 		Random random = new Random();
 
-		int count_aggregations = 0;
-		this.moveStrategy = moveStrategy;
+		int count_aggregations = 0;	// count the # of rounds
 
-		System.out.println(dataset + " " + lambda + " " + gamma);
-		System.out.println(trial + " " + toHigherOrder + " " + ordering + " " + moveStrategy + " " + ratio + " " + save);
+		System.out.println("PIC_prune12_speed " + dataset + " " + lambda + " " + gamma);
+		System.out.println(trial + " " + ordering + " " + ratio + " " + save);
 
-		// variables for ordering
+		// variables for shuffling the order of nodes
 		int randIdx, randNode;
 
 		// variables for rebuildGraph
 		boolean firstReConstruct = true;
 
-		// variables for updateGamma
-		double timeUpdateGamma;
-
 		// variables for move
-		double increase_total = 0;
-		boolean hasIncrease;
-
-//		double randomTime = 0;
-//		double moveTime = 0;
-//		double rebuildTime = 0;
-//		double matchingTime = 0;
-//		double otherTime = 0;
-//		double timer = 0;
+		double increase_total = 0;	// calculate the total modularity gain during iterations (a round)
+		boolean hasIncrease;	// true if there is positive modularity gain in an iteration
 
 		double startTime, endTime;
 		double extractClusterTime = 0;
 		do {
-			System.out.println("itr " + count_aggregations);
+			System.out.println("round " + count_aggregations);
 			count_aggregations++;
 
 			////////////////////////////////////////////////////////////////////////
+			// shuffle the node order
 
 			startTime = System.currentTimeMillis();
 
-//			timer = System.currentTimeMillis();
 			switch (ordering) {
 			case "randomOrder": {
-				// random the order
+				// shuffle the node order
 				for (int i = 0; i < n; i++) {
 					randIdx = random.nextInt(n);
 					randNode = nodeInOrder[i];
@@ -1241,142 +1194,73 @@ public class PIC_prune12_speed {
 			}
 				break;
 			}
-//			randomTime += (System.currentTimeMillis() - timer) / Constant.RUNNING_TIME_UNIT;
 
-//			timer = System.currentTimeMillis();
-			switch (moveStrategy) {
-			case "move": {
-				round = 0;
-				curTimeStamp = 0;
+			//////////////////////////////////////////////////////////////////////
+			// iteratively mobilize each node from its own cluster to its neighbors' clusters
+			
+			iteration = 0;	// reset the number of iterations
+			curTimeStamp = 0;	// reset the number of node moves
+			increase_total = 0;	// reset the total modularity gain
+			hasIncrease = true;
+			
+			while (hasIncrease) {
+				iteration++;
+				hasIncrease = false;
+				incPerIteration = 0;	// calculate the total modularity gain in an iteration
 				
-				increase_total = 0;
-				hasIncrease = true;
-				while (hasIncrease) {
-					round++;
-					hasIncrease = false;
-					increasePerPass = 0;
+				// each iteration scans all the nodes in the graph
+				for (int idx = 0; idx < nodeInOrder.length; idx++) {
+					curTimeStamp++;
 
-//					double step1Time = 0;
-//					double step2Time = 0;
-//					double step21Time = 0;
-//					double step22Time = 0;
-//					double step23Time = 0;
-//					double step3Time = 0;
-
-//					double total = 0;
-//					double sum1 = 0;
-//					double sum2 = 0;
-//					double sum3 = 0;
+					// move
+					move_split_prune12(nodeInOrder[idx]);		// uncomment this for normal-sized hypergraph
+//					move_split_prune12_largeGraph(nodeInOrder[idx]);	// uncomment this for very large hypergraph
 					
-//					System.out.println("round " + round);
-					
-					for (int idx = 0; idx < nodeInOrder.length; idx++) {
-						curTimeStamp++;
-						
-//						String[] strs;
-//						String str;
-
-						move_split_prune12(nodeInOrder[idx]);
-//						move_split_prune12_largeGraph(nodeInOrder[idx]);
-						
-//						str = move_split_opt(nodeInOrder[idx]);
-//						if (!str.equals("") && !str.equals("NaN,NaN,NaN,NaN")) {
-//							strs = str.split(",");
-//							total += Double.parseDouble(strs[0]);
-//							sum1 += Double.parseDouble(strs[1]);
-//							sum2 += Double.parseDouble(strs[2]);
-//							sum3 += Double.parseDouble(strs[3]);
-//						}
-
-//						str = move_split_opt(nodeInOrder[idx]);
-//						strs = str.split(",");
-//						step1Time += Double.parseDouble(strs[0]);
-//						step2Time += Double.parseDouble(strs[1]);
-//						step21Time += Double.parseDouble(strs[2]);
-//						step22Time += Double.parseDouble(strs[3]);
-//						step23Time += Double.parseDouble(strs[4]);
-//						step3Time += Double.parseDouble(strs[5]);
-
-//						String str1 = move_split(nodeInOrder[idx]);
-//						String str2 = move_split_prune123(nodeInOrder[idx]);
-//						if (str1.equals("") && str2.equals("")) continue;
-//						
-//						if (str1.equals("") && !str2.equals("")) {
-//							System.out.println("wrong3 str1 " + str1 + " str2 " + str2);
-//							continue;
-//						}
-//						
-//						if (!str1.equals("") && str2.equals("")) {
-//							System.out.println("wrong4 str1 " + str1 + " str2 " + str2);
-//							continue;
-//						}
-////						System.out.println(str1 + " " + str2);
-//						
-//						String[] str1s = str1.split(",");
-//						String[] str2s = str2.split(",");
-//						
-//						double deltaQ1 = Double.parseDouble(str1s[0]);
-//						double deltaQ2 = Double.parseDouble(str2s[0]);
-//						if (Math.abs(deltaQ1 - deltaQ2) >= eps) {
-//							System.out.println("wrong1 str1 " + str1 + " str2 " + str2);
-//						}
-//						
-//						int c1 = Integer.parseInt(str1s[1]);
-//						int c2 = Integer.parseInt(str2s[1]);
-//						if (c1 != c2) {
-//							System.out.println("wrong2 str1 " + str1 + " str2 " + str2);
-//						}
-					}
-
-//					System.out.println(String.format("%.4f", step1Time) + " " + String.format("%.4f", step2Time) + " "
-//							+ String.format("%.4f", step21Time) + " " + String.format("%.4f", step22Time) + " "
-//							+ String.format("%.4f", step23Time) + " " + String.format("%.4f", step3Time));
-
-//					System.out.println("total " + total + 
-//							" sum1 " + sum1);
-
-//					System.out.println("pass " + count_move + " increasePerPass " + increasePerPass);
-					increase_total += increasePerPass;
-					if (increasePerPass > eps) hasIncrease = true;
-					if (round > n_aggregations) break;
 				}
-			}
-				break;
-			}
-//			moveTime += (System.currentTimeMillis() - timer) / Constant.RUNNING_TIME_UNIT;
 
-//			System.out.println("increase_total " + increase_total);
+				increase_total += incPerIteration;
+				// whether the total modularity gained in an iteration is negligible
+				if (incPerIteration > eps) hasIncrease = true;
+				// whether reaching the maximum number of iterations
+				if (iteration > n_aggregations) break;
+			}
+				
+			//////////////////////////////////////////////////////////////////////
+			// compress all the nodes in each cluster into a supernode; update the graph and construct new adjacent list
+
 			if (increase_total <= eps) break;
 
-//			timer = System.currentTimeMillis();
+			// compressed graph, compress all the nodes in each cluster into a supernode
 			rebuildGraph(firstReConstruct);
-			constructADJ(false);
-//			constructADJ_largeGraph(false);
-			if (useSketch) {
+			
+			// construct the adjacent list 
+			constructADJ(false);		// uncomment this for normal-sized hypergraph
+//			constructADJ_largeGraph(false);	// uncomment this for very large hypergraph
+			
+			// refresh the variables for optimization techniques
+			if (usePruning) {
 				NS_refresh();
 				ES_refresh();
 			}
+			
 			firstReConstruct = false;
-//			rebuildTime += (System.currentTimeMillis() - timer) / Constant.RUNNING_TIME_UNIT;
 
 			endTime = System.currentTimeMillis();
 			extractClusterTime += (endTime - startTime);
 
 			/////////////////////////////////////////////////////////////////////
 
-			timeUpdateGamma = calculateGamma();
-			if (timeUpdateGamma == -999) break;
-			extractClusterTime += (timeUpdateGamma * Constant.RUNNING_TIME_UNIT);
-
-//			matchingTime += timeUpdateGamma;
+			// calculate gamma
+			double updateGammaTime = calculateGamma();
+			extractClusterTime += (updateGammaTime * Constant.RUNNING_TIME_UNIT);
 
 			/////////////////////////////////////////////////////////////////////
 
+			// whether reaching the maximum number of rounds
 			if (count_aggregations > n_aggregations) break;
 
-//			timer = System.currentTimeMillis();
-
 			startTime = System.currentTimeMillis();
+			// reset node moving orders, clusters and cluster volumes
 			nodeInOrder = new int[n];
 			for (int i = 0; i < n; i++) {
 				nodeInOrder[i] = i;
@@ -1386,25 +1270,20 @@ public class PIC_prune12_speed {
 			endTime = System.currentTimeMillis();
 			extractClusterTime += (endTime - startTime);
 
-//			otherTime += (System.currentTimeMillis() - timer) / Constant.RUNNING_TIME_UNIT;
-
 		} while (true);
 
-//		System.out.println("running time " + String.format("%.8f", (extractClusterTime / Constant.RUNNING_TIME_UNIT)));
-
-//		System.out.println("randomTime " + String.format("%.4f", randomTime) + " moveTime " + String.format("%.4f", moveTime)
-//						+ " rebuildTime " + String.format("%.4f", rebuildTime) + " matchingTime "
-//						+ String.format("%.4f", matchingTime) + " otherTime " + String.format("%.4f", otherTime));
-
 		if (save) {
+			// save the clustering result to a txt file
 			saveClusters();
-			saveModularity();
 		}
 
 		return extractClusterTime + "";
 	}
 
 	public double calculateGamma() {
+		
+		// calculate the gamma
+		
 		int cardinality;
 		int nonTrivialEdgeNum = 0;
 		double time = System.currentTimeMillis();
@@ -1415,24 +1294,28 @@ public class PIC_prune12_speed {
 			if (cardinality >= 2) nonTrivialEdgeNum++;
 		}
 		int trivialEdgeNum = m - nonTrivialEdgeNum;
+		
 		double gamma = (double) ((EINC_nID_length-trivialEdgeNum) - 2 * nonTrivialEdgeNum) / (double) ((EINC_nID_length-trivialEdgeNum) - nonTrivialEdgeNum);
-		double extractClusterTime = (System.currentTimeMillis() - time) / Constant.RUNNING_TIME_UNIT;
+		
+		double runningTime = (System.currentTimeMillis() - time) / Constant.RUNNING_TIME_UNIT;
 //		System.out.println("calculateGamma " + gamma);
 		
 		this.gamma = gamma;
-		return extractClusterTime;
+		return runningTime;
 	}
 	
 	public void saveClusters() {
 
+		// save the clustering result to a txt file
+		
 		String fileOutput = "";
 		if (!Constant.CONNECTED) {
-			fileOutput = FilePath_Mon.filePathPre + "/clustering/pic/node_cluster_pic_" + this.moveStrategy
-					+ "_ordered_" + "" + this.toHigherOrder + "_order_" + this.ordering + "_ratio_" + ratio + "_trial_"
+			fileOutput = FilePath_Mon.filePathPre + "/clustering/pic/node_cluster_pic_move"
+					+ "_ordered_" + "false_order_" + this.ordering + "_ratio_" + ratio + "_trial_"
 					+ (this.trial) + ".txt";
 		} else {
-			fileOutput = FilePath_Mon.filePathPre + "/clustering/pic/node_cluster_pic_" + this.moveStrategy
-					+ "_ordered_" + "" + this.toHigherOrder + "_order_" + this.ordering + "_ratio_" + ratio
+			fileOutput = FilePath_Mon.filePathPre + "/clustering/pic/node_cluster_pic_move"
+					+ "_ordered_" + "false_order_" + this.ordering + "_ratio_" + ratio
 					+ "_connect_trial_" + (this.trial) + ".txt";
 		}
 
@@ -1463,34 +1346,6 @@ public class PIC_prune12_speed {
 		}
 	}
 
-	public void saveModularity() {
-		String fileOutput = "";
-		if (!Constant.CONNECTED) {
-			fileOutput = FilePath_Mon.filePathPre + "/clustering/louvain/modularity_Louvain_" + this.moveStrategy
-					+ "_ordered_" + "" + this.toHigherOrder + "_order_" + this.ordering + "_ratio_" + this.ratio
-					+ "_trial_" + this.trial + ".txt";
-		} else {
-			fileOutput = FilePath_Mon.filePathPre + "/clustering/louvain/modularity_Louvain_" + this.moveStrategy
-					+ "_ordered_" + "" + this.toHigherOrder + "_order_" + this.ordering + "_ratio_" + this.ratio
-					+ "_connect_trial_" + this.trial + ".txt";
-		}
-
-		try {
-			FileWriter fwCount = new FileWriter(fileOutput);
-
-			double modularity = 0;
-
-			fwCount.write("modularity\t" + modularity + "\n");
-
-			fwCount.close();
-
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			return;
-		}
-	}
-
 	private void NS_construct() {
 		lastChangeTimes = new int[n];
 	}
@@ -1503,42 +1358,11 @@ public class PIC_prune12_speed {
 
 	private void ES_construct() {
 
-//		int firstIdx_EINC, secondIdx_EINC;
-
-//		// cut off degree
-//		int[] baseArr = new int[m];
-//		int[] followArr = new int[m];
-//		
-//		double avgCardinality = 0;
-//		for (int edge = 0; edge < m; edge++) {
-//			
-//			// for each node in the edge
-//			firstIdx_EINC = EINC_head[edge];
-//			if (edge == m - 1) secondIdx_EINC = EINC_nID_length;
-//			else secondIdx_EINC = EINC_head[edge + 1];
-//			
-//			avgCardinality += (secondIdx_EINC - firstIdx_EINC);
-//			
-//			baseArr[edge] = secondIdx_EINC - firstIdx_EINC;
-//			followArr[edge] = edge;
-//		}
-//		Dsorter.sort(baseArr, followArr);
-//		
-//		System.out.println("cardinality min " + baseArr[0] + " max " + baseArr[baseArr.length - 1] + 
-//				" avg " + String.format("%.4f", (avgCardinality / (double) m)));
-
-		//////////////////////////////////////////////////////////
-
-//		maxDominNodeNum = (int) Math.floor(1.0 / ratio);
 		maxFractionsLazy = new double[m];
 		maxFractionChanges = new double[m];
-//		dominNodes = new int[m];
-
-//		System.out.println("maxDominNodeNum " + maxDominNodeNum);
 
 		for (int edge = 0; edge < m; edge++) {
 			maxFractionsLazy[edge] = EINC_weight[EINC_head[edge]];
-//			dominNodes[edge] = -1;
 		}
 	}
 
@@ -1546,31 +1370,7 @@ public class PIC_prune12_speed {
 
 		int firstIdx_EINC, secondIdx_EINC;
 
-//		// cut off degree
-//		int[] baseArr = new int[m];
-//		int[] followArr = new int[m];
-//		int firstIdx_EINC, secondIdx_EINC;
-//		double avgCardinality = 0;
-//		for (int edge = 0; edge < m; edge++) {
-//			
-//			// for each node in the edge
-//			firstIdx_EINC = EINC_head[edge];
-//			if (edge == m - 1) secondIdx_EINC = EINC_nID_length;
-//			else secondIdx_EINC = EINC_head[edge + 1];
-//			
-//			avgCardinality += (secondIdx_EINC - firstIdx_EINC);
-//			
-//			baseArr[edge] = secondIdx_EINC - firstIdx_EINC;
-//			followArr[edge] = edge;
-//		}
-//		Dsorter.sort(baseArr, followArr);
-//		
-//		System.out.println("cardinality min " + baseArr[0] + " max " + baseArr[baseArr.length - 1] + 
-//				" avg " + String.format("%.4f", (avgCardinality / (double) m)));
-
-		//////////////////////////////////////////////////////////
-		double maxFraction;
-		int maxIdx;
+		double maxFraction, fraction;
 		for (int edge = 0; edge < m; edge++) {
 
 			// for each node in the edge
@@ -1579,64 +1379,16 @@ public class PIC_prune12_speed {
 			else secondIdx_EINC = EINC_head[edge + 1];
 
 			maxFraction = -1;
-			maxIdx = -1;
 			for (int i = firstIdx_EINC; i < secondIdx_EINC; i++) {
-				if (maxFraction < EINC_weight[i]) {
-					maxFraction = EINC_weight[i];
-					maxIdx = i;
+				fraction = EINC_weight[i];
+				if (maxFraction < fraction) {
+					maxFraction = fraction;
 				}
 			}
 
 			maxFractionsLazy[edge] = maxFraction;
 			maxFractionChanges[edge] = 0;
-//			if (maxRatio >= ratio) {
-//				dominNodes[edge] = EINC_nID[maxIdx];
-//			} else {
-//				dominNodes[edge] = -1;
-//			}
 		}
 	}
 
-	public static void main(String arg[]) throws Exception {
-		
-		Hypergraph.array = new int[Hypergraph.maxArraySize];
-		
-		Hypergraph.loadGraph();
-		
-		int trials = 3;
-		boolean toHigherOrder = false;
-		String ordering = "randomOrder";
-		String moveStrategy = "move";
-		double ratio = 0.6;
-		boolean save = false;
-
-//		LouvainHelper LouvainHelper = new LouvainHelper();
-//		System.out.println("ratio " + LouvainHelper.findRatioParallel(toHigherOrder, ordering, moveStrategy, 14));
-
-		double avgRunningTime = 0;
-		double avgAllMemoryUse = 0;
-		String[] strs;
-		for (int trial = 0; trial < trials; trial++) {
-			System.out.println("trial " + trial);
-			PIC_prune12_speed l = new PIC_prune12_speed(trial, toHigherOrder, ordering,
-					ratio, save);
-			l.initPart1();
-
-			Hypergraph.garbbageCollector.gc();
-			long startMem = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
-			l.initPart2();
-
-			strs = l.louvain(moveStrategy).split(",");
-			long endMem = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
-			long memoryUse = endMem - startMem;
-
-			avgRunningTime += Double.parseDouble(strs[0]);
-			avgAllMemoryUse += memoryUse;
-		}
-		avgRunningTime /= trials;
-		avgAllMemoryUse /= trials;
-
-		System.out.println("runningTime," + String.format("%.8f", (avgRunningTime / Constant.RUNNING_TIME_UNIT)));
-		System.out.println("AllMemoryUse," + String.format("%.8f", (avgAllMemoryUse / Constant.MEMORY_UNIT)));
-	}
 }
