@@ -16,9 +16,6 @@ We included the parameters in a soft-coded way. The program exp/Panel.java provi
 
 Note that based on the user input, the values of global variables like file_paths and ratio will be modified by the program correspondingly. In other words, a user does not need to modify the code by hand.
 
-Downloading the complete project. The SIGMOD recommended Anonymous GitHub platform is not download friendly, which seems to be its temporary functional limitation. We, though currently constrained by the anonymity requirement, will release the complete project as a public repository in Github after the revision
-for a better "one-click" downloading option.
-
 ------------------------------------------------------------------------------------------------------------
 Sample Task-1. Do the clustering using method PIC with no optimization technique (PIC_noPrune) on data set citeseer_cociting.
 
