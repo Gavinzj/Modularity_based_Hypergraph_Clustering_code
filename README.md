@@ -102,7 +102,7 @@ Sample Task-5. Do the clustering using method PIC with optimization technique 2 
 
 Commands:<br/>
 citeseer_cociting<br/>
-Clustering PIC_prune2 0.31 20<br/>
+Clustering PIC_prune2 0.31 0.31 20<br/>
 0<br/>
 <br/>
 
@@ -115,7 +115,7 @@ Sample Task-6. Do the clustering using method PIC with optimization techniques 1
 
 Commands:<br/>
 citeseer_cociting<br/>
-Clustering PIC_prune12 0.31 20<br/>
+Clustering PIC_prune12 0.31 0.31 20<br/>
 0<br/>
 <br/>
 
