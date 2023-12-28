@@ -85,39 +85,39 @@ The running time would be saved under the folder data/citeseer_cociting/clusteri
 
 ------------------------------------------------------------------------------------------------------------
 
-Sample Task-4. Calculate the running time of method PIC with optimization technique 1 (PIC_prune1) on data set citeseer_cociting.
+Sample Task-4. Do the clustering using method PIC with optimization technique 1 (PIC_prune1) on data set citeseer_cociting.
 
 Commands:<br/>
 citeseer_cociting<br/>
-runningTime PIC_prune1 0.31 20<br/>
+Clustering PIC_prune1 0.31 0.31 20<br/>
 0<br/>
 <br/>
 
 Output:<br/>
-The running time would be saved under the folder data/citeseer_cociting/clustering/pic/.
+The clustering results obtained would be stored under the folder data/citeseer_cociting/clustering/pic/.
 
 ------------------------------------------------------------------------------------------------------------
 
-Sample Task-5. Calculate the running time of method PIC with optimization technique 2 (PIC_prune2) on data set citeseer_cociting.
+Sample Task-5. Do the clustering using method PIC with optimization technique 2 (PIC_prune2) on data set citeseer_cociting.
 
 Commands:<br/>
 citeseer_cociting<br/>
-runningTime PIC_prune2 0.31 20<br/>
+Clustering PIC_prune2 0.31 20<br/>
 0<br/>
 <br/>
 
 Output:<br/>
-The running time would be saved under the folder data/citeseer_cociting/clustering/pic/.
+The clustering results obtained would be stored under the folder data/citeseer_cociting/clustering/pic/.
 
 ------------------------------------------------------------------------------------------------------------
 
-Sample Task-6. Calculate the running time of method PIC with optimization techniques 1 and 2 (PIC_prune12) on data set citeseer_cociting.
+Sample Task-6. Do the clustering using method PIC with optimization techniques 1 and 2 (PIC_prune12) on data set citeseer_cociting.
 
 Commands:<br/>
 citeseer_cociting<br/>
-runningTime PIC_prune12 0.31 20<br/>
+Clustering PIC_prune12 0.31 20<br/>
 0<br/>
 <br/>
 
 Output:<br/>
-The running time would be saved under the folder data/citeseer_cociting/clustering/pic/.
+The clustering results obtained would be stored under the folder data/citeseer_cociting/clustering/pic/.
