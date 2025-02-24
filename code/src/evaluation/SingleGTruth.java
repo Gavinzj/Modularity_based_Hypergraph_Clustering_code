@@ -698,14 +698,7 @@ public class SingleGTruth {
 			avgBALRI /= cnt_balri;
 			
 			fw_user.write("PRF_Prime_" + method + "\n");
-			fw_user.write(minClusterSize_Ground + "," + maxClusterSize_Ground + "," + midClusterSize_Ground+ "," + avgClusterSize_Ground + "\n");
-			fw_user.write(String.format("%.1f",minDiscoverSize) + "," + String.format("%.1f",maxDiscoverSize) + 
-					"," + String.format("%.1f",midDiscoverSize) + "," + String.format("%.1f",avgDiscoverSize) + "\n");
-			fw_user.write(String.format("%.1f",avgDiscoverNum) + "," + clusters_Ground.length + "," + String.format("%.4f",avgF1) + 
-					"," + String.format("%.4f",avgARI) +  "," + String.format("%.4f",avgJCC) + "," + String.format("%.4f",avgBALRI) + "\n");
-			fw_user.write(String.format("%.4f",avgPrecision) + "," + String.format("%.4f",avgRecall) + "\n");
-			fw_user.write(String.format("%.4f",avg_TP) + "," + String.format("%.4f",avg_FN) + "," + String.format("%.4f",avg_FP) 
-					+ "," + String.format("%.4f",avg_TN) +  "\n");
+			fw_user.write(String.format("%.4f",avgF1) + "," + String.format("%.4f",avgPrecision) + "," + String.format("%.4f",avgRecall) + "\n");
 			fw_user.write("\n");
 			fw_user.close();
 
