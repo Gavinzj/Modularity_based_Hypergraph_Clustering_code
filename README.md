@@ -158,11 +158,7 @@ The running time would be saved under the folder data/citeseer_cociting/clusteri
 <ul>
     <li>Download Jama: You can download the Jama JAR file from the official site (https://math.nist.gov/javanumerics/jama/).</li>
 
-    <li><strong>Create or Open Your Project:</strong>
-        <ul>
-            <li>Open IntelliJ IDEA and either create a new project or open your existing project.</li>
-        </ul>
-    </li>
+    <li>Create/Open Your Project: Open IntelliJ IDEA and either create a new project or open your existing project.</li>
 
     <li><strong>Add the Jama JAR to Your Project:</strong>
         <ul>
@@ -206,13 +202,7 @@ The running time would be saved under the folder data/citeseer_cociting/clusteri
 
 <h2>Instructions on adding Jama library (IntelliJ IDEA as an example):</h2>
 
-<ul>
-</ul>
-<p>Download Jama:</p>
-You can download the Jama JAR file from the official site (https://math.nist.gov/javanumerics/jama/).
 
-Create/ Open Your Project:<br>
-    Open IntelliJ IDEA and either create a new project or open your existing project.
 
 Add Jama JAR to Your Project:<br>
 <ol>
