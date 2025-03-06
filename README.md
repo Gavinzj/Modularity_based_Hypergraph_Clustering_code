@@ -20,6 +20,8 @@ We included the parameters in a soft-coded way. The program exp/Panel.java provi
 
 Note that based on the user input, the values of global variables like file_paths and parameters will be modified by the program correspondingly. In other words, a user does not need to modify the code by hand.
 
+Link to the code: https://github.com/Gavinzj/Modularity_based_Hypergraph_Clustering_code
+
 <hr>
 
 <h3>Sample Task 1</h3>
@@ -208,5 +210,3 @@ The running time would be saved under the folder data/citeseer_cociting/clusteri
     </li>
     <li>Use Jama in Your Code: Now you can use the Jama library in your Java classes</li>
 </ul>
-
-Link to the code: https://github.com/Gavinzj/Modularity_based_Hypergraph_Clustering_code
