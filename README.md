@@ -153,27 +153,33 @@ The running time would be saved under the folder data/citeseer_cociting/clusteri
 
 <hr>
 
-<h2>Instructions on adding Jama library (IntelliJ IDEA as an example):<h2>
+<h2>Instructions on adding Jama library (IntelliJ IDEA as an example):</h2>
+
 
 <p>Download Jama:</p>
 You can download the Jama JAR file from the official site (https://math.nist.gov/javanumerics/jama/).
 
-    Create/ Open Your Project:
-        Open IntelliJ IDEA and either create a new project or open your existing project.
+Create/ Open Your Project:<br>
+    Open IntelliJ IDEA and either create a new project or open your existing project.
 
-    Add Jama JAR to Your Project:
-        Right-click on your project folder in the Project pane.
-        Select "New" > "Directory" and name it something like libs (or another name of your choice).
-        Drag the Jama-1.0.3.jar file into the libs directory.
+Add Jama JAR to Your Project:<br>
+<ol>
+    <li>Right-click on your project folder in the Project pane.</li>
+    <li>Select "New" > "Directory" and name it something like libs (or another name of your choice).</li>
+    <li>Drag the Jama-1.0.3.jar file into the libs directory.</li>
+</ol>
+<!-- Right-click on your project folder in the Project pane.
+Select "New" > "Directory" and name it something like libs (or another name of your choice).
+Drag the Jama-1.0.3.jar file into the libs directory. -->
 
-    Include Jama in Your Project:
-        Right-click on Jama-1.0.3.jar in the libs directory.
-        Select "Add as Library".
-        In the dialog, choose "Module SDK" (if not automatically selected) and click OK.
+Include Jama in Your Project:<br>
+    Right-click on Jama-1.0.3.jar in the libs directory.
+    Select "Add as Library".
+    In the dialog, choose "Module SDK" (if not automatically selected) and click OK.
 
-    Verify Library Addition:
-        In Project Structure, navigate to File > Project Structure > Libraries.
-        Make sure Jama-1.0.3.jar is listed as one of the libraries.
+Verify Library Addition:<br>
+    In Project Structure, navigate to File > Project Structure > Libraries.
+    Make sure Jama-1.0.3.jar is listed as one of the libraries.
 
-    Use Jama in Your Code:
-        Now you can use the Jama library in your Java classes
+Use Jama in Your Code:<br>
+    Now you can use the Jama library in your Java classes
