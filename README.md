@@ -23,20 +23,21 @@ Note that based on the user input, the values of global variables like file_path
 <hr>
 
 <h3>Sample Task 1</h3>
-Task: Do the clustering using method PIC with no optimization technique (PIC_noPrune) on data set citeseer_cociting.
+<p>Task: Do the clustering using method PIC with no optimization technique (PIC_noPrune) on data set citeseer_cociting.</p>
 
 
-Commands:<br/>
+<p>Commands:</p>
 <pre>
 citeseer_cociting
 Clustering PIC_noPrune 0.31 0.31 20
 0
 </pre>
 
+<!-- Commands:<br/>
 citeseer_cociting<br/>
 Clustering PIC_noPrune 0.31 0.31 20<br/>
 0<br/>
-<br/>
+<br/> -->
 
 The explanation for the commands: <br/>
 Line 1: data_set_name <br/>
