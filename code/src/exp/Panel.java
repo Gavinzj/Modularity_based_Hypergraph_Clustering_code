@@ -69,44 +69,6 @@ public class Panel {
 								}
 							}
 								break;
-								
-							case "PIC_prune1":
-							{
-								// hypergraph clustering using PIC with optimization technique 1
-								// varying on ratio -- theta
-								
-								String ordering = "randomOrder";	// by default (we fix it here), the order of node move is random
-								double minratio = Double.parseDouble(strs[2]);	// minimum ratio (theta)
-								double maxRatio = Double.parseDouble(strs[3]);	// maximum ratio (theta)
-								int trials = Integer.parseInt(strs[4]);	// number of trials that the algorithm runs
-								
-								// for each ratio (theta) vary from minratio to maxratio with step size 0.1
-								for (double ratio = minratio; ratio <= maxRatio; ratio += 0.1) {
-									Clustering_PIC clustering = new Clustering_PIC();
-									clustering.doClustering_PIC_prune1(ordering, ratio, trials);
-									Hypergraph.garbbageCollector.gc();
-								}
-							}
-								break;
-							
-							case "PIC_prune2":
-							{
-								// hypergraph clustering using PIC with optimization technique 2
-								// varying on ratio -- theta
-								
-								String ordering = "randomOrder";	// by default (we fix it here), the order of node move is random
-								double minratio = Double.parseDouble(strs[2]);	// minimum ratio (theta)
-								double maxRatio = Double.parseDouble(strs[3]);	// maximum ratio (theta)
-								int trials = Integer.parseInt(strs[4]);	// number of trials that the algorithm runs
-								
-								// for each ratio (theta) vary from minratio to maxratio with step size 0.1
-								for (double ratio = minratio; ratio <= maxRatio; ratio += 0.1) {
-									Clustering_PIC clustering = new Clustering_PIC();
-									clustering.doClustering_PIC_prune2(ordering, ratio, trials);
-									Hypergraph.garbbageCollector.gc();
-								}
-							}
-								break;
 							
 							case "PIC_prune12":
 							{
@@ -151,34 +113,6 @@ public class Panel {
 								
 								Clustering_PIC clustering = new Clustering_PIC();
 								clustering.runningTime_PIC_noPrune(ordering, ratio, trials);
-								Hypergraph.garbbageCollector.gc();
-							}
-								break;
-							
-							case "PIC_prune1":
-							{
-								// hypergraph clustering using PIC with optimization technique 1
-								
-								String ordering = "randomOrder";	// by default (we fix it here), the order of node move is random
-								double ratio = Double.parseDouble(strs[2]);	// the value of ratio (theta)
-								int trials = Integer.parseInt(strs[3]);	// calculate the average running time over several number of trials
-								
-								Clustering_PIC clustering = new Clustering_PIC();
-								clustering.runningTime_PIC_prune1(ordering, ratio, trials);
-								Hypergraph.garbbageCollector.gc();
-							}
-								break;
-								
-							case "PIC_prune2":
-							{
-								// hypergraph clustering using PIC with optimization technique 2
-								
-								String ordering = "randomOrder";	// by default (we fix it here), the order of node move is random
-								double ratio = Double.parseDouble(strs[2]);	// the value of ratio (theta)
-								int trials = Integer.parseInt(strs[3]);	// calculate the average running time over several number of trials
-								
-								Clustering_PIC clustering = new Clustering_PIC();
-								clustering.runningTime_PIC_prune2(ordering, ratio, trials);
 								Hypergraph.garbbageCollector.gc();
 							}
 								break;
