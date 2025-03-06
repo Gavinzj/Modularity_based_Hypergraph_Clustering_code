@@ -19,6 +19,11 @@ We included the parameters in a soft-coded way. The program exp/Panel.java provi
 
 Note that based on the user input, the values of global variables like file_paths and parameters will be modified by the program correspondingly. In other words, a user does not need to modify the code by hand.
 
+<hr>
+
+<h3>Sample Task 1</h3>
+Do the clustering using method PIC with no optimization technique (PIC_noPrune) on data set citeseer_cociting.
+
 ------------------------------------------------------------------------------------------------------------
 Sample Task-1. Do the clustering using method PIC with no optimization technique (PIC_noPrune) on data set citeseer_cociting.
 
