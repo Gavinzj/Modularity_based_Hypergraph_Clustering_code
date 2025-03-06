@@ -12,9 +12,6 @@ import utilities.Constant;
 import utilities.FilePath_Mon;
 
 //calculate the running time of PIC algorithm with optimization techniques 1 and 2
-//Note: on the hypergraphs with very large sizes, use
-//1) call constructADJ_largeGraph() in initPart1() and pic() to construct the adjacent list
-//2) call move_split_largeGraph() in pic() to move a node 
 public class PIC_prune12_speed {
 
 	int trial;
@@ -142,7 +139,6 @@ public class PIC_prune12_speed {
 		
 		// construct the adjacent list 
 		constructADJ(true);		// uncomment this for normal-sized hypergraph
-//		constructADJ_largeGraph(true);	// uncomment this for very large hypergraph
 	}
 
 	public double initPart2() {
@@ -1012,144 +1008,6 @@ public class PIC_prune12_speed {
 		}
 	}
 	
-	public void constructADJ_largeGraph(boolean firstConstruct) {
-		
-		// construct the adjacency matrix 
-		// for a very large hypergraph, the adjacent list needs to be splitted into
-		// several smaller one
-		
-		int maxSplitNum = 32;
-		System.out.println("#constructADJ_largeGraph");
-		
-		// initialize the variables for constructing the adjacent list
-		byte splitCnt = 0;
-		int lastHead = 0;
-		int maxArraySize = Constant.maxArraySize;
-		int arrayIndex = 0;
-		if (firstConstruct) {
-			largeSplit = new byte[n];
-			largeADJ_head = new int[maxSplitNum][];
-			largeADJ_nID = new int[maxSplitNum][];
-			largeADJ_nID_length = new int[maxSplitNum];
-			largeEndNode = new int[maxSplitNum];
-			
-			largeADJ_head[splitCnt] = new int[n];
-		}
-		
-		// for each node
-		boolean full = false;
-		int maxDegree = -1;
-		int secondIdx_INC, secondIdx_EINC, edgeID, neighbor, degree;
-		for (int thisNode = 0; thisNode < n; thisNode++) {
-			
-			largeADJ_head[splitCnt][thisNode] = arrayIndex;
-			lastHead = arrayIndex;
-			
-			// for each incident edge
-			if (thisNode == endN) secondIdx_INC = INC_eID_length;
-			else secondIdx_INC = INC_head[thisNode + 1];
-			
-			for (int i = INC_head[thisNode]; i < secondIdx_INC; i++) {
-				edgeID = INC_eID[i];
-
-				// for each node in the edge
-				if (edgeID == endM) secondIdx_EINC = EINC_nID_length;
-				else secondIdx_EINC = EINC_head[edgeID + 1];
-
-				for (int j = EINC_head[edgeID]; j < secondIdx_EINC; j++) {
-					neighbor = EINC_nID[j];
-					if (neighbor == thisNode) continue;
-					
-					if (!visited[neighbor]) {
-						visited[neighbor] = true;
-						Hypergraph.array[arrayIndex++] = neighbor;
-						
-						if (arrayIndex >= maxArraySize) {
-							full = true;
-							break;
-						}
-					}
-				}
-				
-				if (full) break;
-			}
-			
-			if (full) {
-				System.out.println("full, lastHead " + lastHead);
-				
-				for (int i = lastHead; i < arrayIndex; i++) {
-					visited[Hypergraph.array[i]] = false;
-				}
-				
-				largeEndNode[splitCnt] = thisNode - 1;
-				if (firstConstruct || lastHead > largeADJ_nID[splitCnt].length) {
-					largeADJ_nID[splitCnt] = new int[lastHead];
-				}
-				largeADJ_nID_length[splitCnt] = lastHead;
-				
-				for (int i = 0; i < lastHead; i++) {
-					largeADJ_nID[splitCnt][i] = Hypergraph.array[i];
-				}
-				
-				System.out.println("split " + splitCnt + " end node " + largeEndNode[splitCnt] + " nID_length " + largeADJ_nID_length[splitCnt]);
-				
-				////////////////////////////////////////////////////////
-				
-				splitCnt++;
-				thisNode--;
-				full = false;
-				
-				////////////////////////////////////////////////////////
-				
-				lastHead = 0;
-				arrayIndex = 0;
-				
-				largeADJ_head[splitCnt] = new int[n];
-				
-			} else {
-				largeSplit[thisNode] = splitCnt;
-				
-				degree = arrayIndex - lastHead;
-				if (maxDegree < degree) maxDegree = degree;
-				
-				for (int i = lastHead; i < arrayIndex; i++) {
-					visited[Hypergraph.array[i]] = false;
-				}
-			}
-		}
-		for (int i = lastHead; i < arrayIndex; i++) {
-			visited[Hypergraph.array[i]] = false;
-		}
-		largeEndNode[splitCnt] = n - 1;
-		if (firstConstruct || arrayIndex > largeADJ_nID[splitCnt].length) {
-			largeADJ_nID[splitCnt] = new int[arrayIndex];
-		}
-		
-		// store the adjacent list
-		largeADJ_nID_length[splitCnt] = arrayIndex;
-		for (int i = 0; i < arrayIndex; i++) {
-			largeADJ_nID[splitCnt][i] = Hypergraph.array[i];
-		}
-		
-		System.out.println("split " + splitCnt + " end node " + largeEndNode[splitCnt] + " nID_length " + largeADJ_nID_length[splitCnt]);
-		
-		long totVol = 0;
-		for (int split = 0; split <= splitCnt; split++) {
-			totVol += largeADJ_nID_length[split];
-		}
-		System.out.println("totVol " + totVol + " maxDegree " + maxDegree);
-		
-		// initialize the variables for the later node move using the information of 
-		// the maximum number of adjacent neighbor
-		if (firstConstruct || (maxDegree + 1) > fractions.length) {
-			fractions = new double[maxDegree + 1];
-			incident_clusteridxs = new int[maxDegree + 1];
-			incident_weights = new double[maxDegree + 1];
-			possibleNeighborClusters = new int[maxDegree + 1];
-			impossibleNeighborClusters = new int[maxDegree + 1];
-		}
-	}
-
 	public String pic() throws Exception {
 
 		// PIC follows the Louvain-style framework that iteratively maximizes the PI modularity
@@ -1235,7 +1093,6 @@ public class PIC_prune12_speed {
 			
 			// construct the adjacent list 
 			constructADJ(false);		// uncomment this for normal-sized hypergraph
-//			constructADJ_largeGraph(false);	// uncomment this for very large hypergraph
 			
 			// refresh the variables for optimization techniques
 			if (usePruning) {

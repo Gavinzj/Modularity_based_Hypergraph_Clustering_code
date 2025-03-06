@@ -12,9 +12,6 @@ import utilities.Constant;
 import utilities.FilePath_Mon;
 
 // calculate the running time of PIC algorithm with no optimization technique
-// Note: on the hypergraphs with very large sizes, use
-// 1) call constructADJ_largeGraph() in initPart1() and pic() to construct the adjacent list
-// 2) call move_split_largeGraph() in pic() to move a node 
 public class PIC_noPrune_speed {
 
 	int trial;
@@ -140,7 +137,6 @@ public class PIC_noPrune_speed {
 		
 		// construct the adjacent list 
 		constructADJ(true);		// uncomment this for normal-sized hypergraph
-//		constructADJ_largeGraph(true);	// uncomment this for very large hypergraph
 	}
 
 	public double initPart2() {
@@ -362,179 +358,6 @@ public class PIC_noPrune_speed {
 			double deltaQ_local = deltaQ + deltaQ_exit;
 			
 			// update the best modularity gain and cluster
-			if (deltaQ_local > deltaQ_best) {
-				deltaQ_best = deltaQ_local;
-				best_targetCluster = targetClusterID;
-			}
-		}
-
-		// if there is positive modularity gain, change the clustering
-		if (deltaQ_best > 0 && best_targetCluster != thisCluster) {
-			// decide to move
-			incPerIteration += deltaQ_best;
-			cluster_volume[thisCluster] -= thisDegree;
-			cluster_volume[best_targetCluster] += thisDegree;
-			clusters[thisNode] = best_targetCluster;
-
-			return;
-		}
-
-		return;
-	}
-
-	public void move_split_largeGraph(int thisNode) {
-
-		// current cluster of the node
-		int thisCluster = clusters[thisNode];
-
-		int split = largeSplit[thisNode];
-		int endNode = largeEndNode[split];
-		
-		// adjacent list of the node
-		int secondIdx_ADJ;
-		if (thisNode == endNode) secondIdx_ADJ = largeADJ_nID_length[split];
-		else secondIdx_ADJ = largeADJ_head[split][thisNode + 1];
-
-		int cluster;
-		int possibleNeighborClusterNum = 0;
-		int distinctNeighborClusterNum = 0;
-		
-		// find the neighbor clusters
-		// add cluster of thisNode
-		possibleNeighborClusters[possibleNeighborClusterNum++] = thisCluster;
-		clusterIdxs[thisCluster] = distinctNeighborClusterNum++;
-		visited[thisCluster] = true;
-		// add cluster of adjacent neighbors
-		for (int i = largeADJ_head[split][thisNode]; i < secondIdx_ADJ; i++) {
-			cluster = clusters[largeADJ_nID[split][i]];
-			if (!visited[cluster]) {
-				possibleNeighborClusters[possibleNeighborClusterNum++] = cluster;
-				clusterIdxs[cluster] = distinctNeighborClusterNum++;
-				visited[cluster] = true;
-			}
-		}
-		for (int i = 0; i < possibleNeighborClusterNum; i++) {
-			visited[possibleNeighborClusters[i]] = false;
-		}
-		
-		// if all neighbor clusters are the same as the current cluster
-		if (distinctNeighborClusterNum == 1) {
-			clusterIdxs[thisCluster] = -1;
-			return;
-		}
-
-		int incident_clusterNum = 0;
-
-		// for each incident edge
-		int secondIdx_INC, firstIdx_INC = INC_head[thisNode];
-		if (thisNode == endN) secondIdx_INC = INC_eID_length;
-		else secondIdx_INC = INC_head[thisNode + 1];
-
-		// calculate the delta support
-		int edge, node, clusterIdx;
-		double thisWeight, edgeWeight;
-		double ratio_u, ratio_cNotu, ratio_c;
-		double contribute_u, contribute_cNotu, contribute_c;
-		for (int i = firstIdx_INC; i < secondIdx_INC; i++) {
-			edge = INC_eID[i];
-			thisWeight = INC_weight[i];
-			edgeWeight = edge_weights[edge];
-
-			// for each node in the edge
-			int secondIdx, firstIdx = EINC_head[edge];
-			if (edge == endM) secondIdx = EINC_nID_length;
-			else secondIdx = EINC_head[edge + 1];
-
-			incident_clusterNum = 0;
-			for (int j = firstIdx; j < secondIdx; j++) {
-				node = EINC_nID[j];
-				if (node == thisNode) continue;
-
-				clusterIdx = clusterIdxs[clusters[node]];
-				fractions[clusterIdx] += EINC_weight[j];
-				if (!visited[clusterIdx]) {
-					incident_clusteridxs[incident_clusterNum++] = clusterIdx;
-					visited[clusterIdx] = true;
-				}
-			}
-
-			ratio_u = thisWeight / edgeWeight;
-			if (ratio_u >= ratio) contribute_u = adjustWeight_LinearLog(edgeWeight, ratio_u);
-			else contribute_u = 0;
-
-			for (int j = 0; j < incident_clusterNum; j++) {
-
-				clusterIdx = incident_clusteridxs[j];
-				visited[clusterIdx] = false;
-
-				ratio_cNotu = fractions[clusterIdx] / edgeWeight;
-				fractions[clusterIdx] = 0;
-
-				if (ratio_cNotu >= ratio) {
-					contribute_cNotu = adjustWeight_LinearLog(edgeWeight, ratio_cNotu);
-				} else
-					contribute_cNotu = 0;
-
-				ratio_c = ratio_u + ratio_cNotu;
-				if (ratio_c >= ratio) {
-					contribute_c = adjustWeight_LinearLog(edgeWeight, ratio_c);
-				} else {
-					contribute_c = 0;
-				}
-
-				incident_weights[clusterIdx] += (contribute_c - contribute_u - contribute_cNotu);
-			}
-		}
-
-		// try removing the node from current cluster
-		double vol_cu, delta_eta_cu;
-		double vol_c = cluster_volume[thisCluster];
-		double thisDegree = node_degrees[thisNode];
-		double vol_cNou = vol_c - thisDegree;
-		
-		double eta_cu;
-		double CC = 1.0 - gamma;
-		double oneMinusGamma = 1.0 - gamma;
-		double eta_cNou = ratio * (1.0 - (vol_cNou / totalEdgeWeight));
-		double delta_eta_cNou =  (1.0 - eta_cNou) * (1.0 - eta_cNou) * CC / (oneMinusGamma + (gamma * eta_cNou));
-		double eta_u = ratio * (1.0 - (thisDegree / totalEdgeWeight));
-		double delta_eta_u = (1.0 - eta_u) * (1.0 - eta_u) * CC / (oneMinusGamma + (gamma * eta_u));		
-		double eta_c = ratio * (1.0 - (vol_c / totalEdgeWeight));
-		double delta_eta_c = (1.0 - eta_c) * (1.0 - eta_c) * CC / (oneMinusGamma + (gamma * eta_c));
-
-		clusterIdx = clusterIdxs[thisCluster];
-		clusterIdxs[thisCluster] = -1;
-//		double deltaQ_exit = (incident_weights[clusterIdx] / totalEdgeWeight) + eta;
-		double deltaQ_exit = (incident_weights[clusterIdx] / totalEdgeWeight) + delta_eta_cNou + delta_eta_u - delta_eta_c;
-		incident_weights[clusterIdx] = 0;
-		deltaQ_exit = -1 * deltaQ_exit;
-
-		// try merging the node to each of its distinct neighbor clusters
-		int targetClusterID;
-		int best_targetCluster = thisCluster;
-		double deltaQ_best = 0;
-
-		for (int i = 0; i < possibleNeighborClusterNum; i++) {
-			targetClusterID = possibleNeighborClusters[i];
-			if (thisCluster == targetClusterID) continue;
-
-			vol_c = cluster_volume[targetClusterID];
-			vol_cu = thisDegree + vol_c;
-			
-			eta_c = ratio * (1.0 - (vol_c / totalEdgeWeight));
-			delta_eta_c = (1.0 - eta_c) * (1.0 - eta_c) * CC / (oneMinusGamma + (gamma * eta_c));
-			eta_u = ratio * (1.0 - (thisDegree / totalEdgeWeight));
-			delta_eta_u = (1.0 - eta_u) * (1.0 - eta_u) * CC / (oneMinusGamma + (gamma * eta_u));
-			eta_cu = ratio * (1.0 - (vol_cu / totalEdgeWeight));
-			delta_eta_cu = (1.0 - eta_cu) * (1.0 - eta_cu) * CC / (oneMinusGamma + (gamma * eta_cu));
-
-			clusterIdx = clusterIdxs[targetClusterID];
-			clusterIdxs[targetClusterID] = -1;
-//			double deltaQ = (incident_weights[clusterIdx] / totalEdgeWeight) + eta;
-			double deltaQ = (incident_weights[clusterIdx] / totalEdgeWeight) + delta_eta_c + delta_eta_u - delta_eta_cu;
-			incident_weights[clusterIdx] = 0;
-			double deltaQ_local = deltaQ + deltaQ_exit;
-			
 			if (deltaQ_local > deltaQ_best) {
 				deltaQ_best = deltaQ_local;
 				best_targetCluster = targetClusterID;
@@ -835,147 +658,6 @@ public class PIC_noPrune_speed {
 		}
 	}
 	
-	public void constructADJ_largeGraph(boolean firstConstruct) {
-		
-		// construct the adjacency matrix 
-		// for a very large hypergraph, the adjacent list needs to be splitted into
-		// several smaller one
-		
-		int maxSplitNum = 32;
-		System.out.println("#constructADJ_largeGraph");
-		
-		// initialize the variables for constructing the adjacent list
-		byte splitCnt = 0;
-		int lastHead = 0;
-		int maxArraySize = Constant.maxArraySize;
-		int arrayIndex = 0;
-		if (firstConstruct) {
-			largeSplit = new byte[n];
-			largeADJ_head = new int[maxSplitNum][];
-			largeADJ_nID = new int[maxSplitNum][];
-			largeADJ_nID_length = new int[maxSplitNum];
-			largeEndNode = new int[maxSplitNum];
-			
-			largeADJ_head[splitCnt] = new int[n];
-		}
-		
-		// for each node
-		boolean full = false;
-		int maxDegree = -1;
-		int secondIdx_INC, secondIdx_EINC, edgeID, neighbor, degree;
-		for (int thisNode = 0; thisNode < n; thisNode++) {
-			
-			largeADJ_head[splitCnt][thisNode] = arrayIndex;
-			lastHead = arrayIndex;
-			
-			// for each incident edge
-			if (thisNode == endN) secondIdx_INC = INC_eID_length;
-			else secondIdx_INC = INC_head[thisNode + 1];
-			
-			for (int i = INC_head[thisNode]; i < secondIdx_INC; i++) {
-				edgeID = INC_eID[i];
-
-				// for each node in the edge
-				if (edgeID == endM) secondIdx_EINC = EINC_nID_length;
-				else secondIdx_EINC = EINC_head[edgeID + 1];
-
-				for (int j = EINC_head[edgeID]; j < secondIdx_EINC; j++) {
-					neighbor = EINC_nID[j];
-					if (neighbor == thisNode) continue;
-					
-					if (!visited[neighbor]) {
-						visited[neighbor] = true;
-						Hypergraph.array[arrayIndex++] = neighbor;
-						
-						if (arrayIndex >= maxArraySize) {
-							full = true;
-							break;
-						}
-					}
-				}
-				
-				if (full) break;
-			}
-			
-			if (full) {
-				System.out.println("full, lastHead " + lastHead);
-				
-				for (int i = lastHead; i < arrayIndex; i++) {
-					visited[Hypergraph.array[i]] = false;
-				}
-				
-				largeEndNode[splitCnt] = thisNode - 1;
-				if (firstConstruct || lastHead > largeADJ_nID[splitCnt].length) {
-					largeADJ_nID[splitCnt] = new int[lastHead];
-				}
-				largeADJ_nID_length[splitCnt] = lastHead;
-				
-				for (int i = 0; i < lastHead; i++) {
-					largeADJ_nID[splitCnt][i] = Hypergraph.array[i];
-				}
-				
-				System.out.println("split " + splitCnt + " end node " + largeEndNode[splitCnt] + " nID_length " + largeADJ_nID_length[splitCnt]);
-				
-				////////////////////////////////////////////////////////
-				
-				splitCnt++;
-				thisNode--;
-				full = false;
-				
-				////////////////////////////////////////////////////////
-				
-				lastHead = 0;
-				arrayIndex = 0;
-				
-				largeADJ_head[splitCnt] = new int[n];
-				
-			} else {
-				largeSplit[thisNode] = splitCnt;
-				
-				degree = arrayIndex - lastHead;
-				if (maxDegree < degree) maxDegree = degree;
-				
-//				System.out.println("node " + thisNode + " split " + largeSplit[thisNode] + " node size " + nodeSize + " degree " + degree);
-				
-				for (int i = lastHead; i < arrayIndex; i++) {
-					visited[Hypergraph.array[i]] = false;
-				}
-			}
-		}
-		for (int i = lastHead; i < arrayIndex; i++) {
-			visited[Hypergraph.array[i]] = false;
-		}
-		largeEndNode[splitCnt] = n - 1;
-		if (firstConstruct || arrayIndex > largeADJ_nID[splitCnt].length) {
-			largeADJ_nID[splitCnt] = new int[arrayIndex];
-		}
-		
-		// store the adjacent list
-		largeADJ_nID_length[splitCnt] = arrayIndex;
-		for (int i = 0; i < arrayIndex; i++) {
-			largeADJ_nID[splitCnt][i] = Hypergraph.array[i];
-		}
-		
-		System.out.println("split " + splitCnt + " end node " + largeEndNode[splitCnt] + " nID_length " + largeADJ_nID_length[splitCnt]);
-		
-		long totVol = 0;
-		for (int split = 0; split <= splitCnt; split++) {
-			totVol += largeADJ_nID_length[split];
-//			System.out.println("split " + split + " largeADJ_nID_length[split] " + largeADJ_nID_length[split]);
-		}
-		System.out.println("totVol " + totVol + " maxDegree " + maxDegree);
-		
-		// initialize the variables for the later node move using the information of 
-		// the maximum number of adjacent neighbor
-		if (firstConstruct || (maxDegree + 1) > fractions.length) {
-			fractions = new double[maxDegree + 1];
-			incident_clusteridxs = new int[maxDegree + 1];
-			incident_weights = new double[maxDegree + 1];
-			possibleNeighborClusters = new int[maxDegree + 1];
-			impossibleNeighborClusters = new int[maxDegree + 1];
-		}
-	}
-
 	public String pic() throws Exception {
 
 		// PIC follows the Louvain-style framework that iteratively maximizes the PI modularity
@@ -1040,7 +722,6 @@ public class PIC_noPrune_speed {
 
 					// move
 					move_split(nodeInOrder[idx]);		// uncomment this for normal-sized hypergraph
-//					move_split_largeGraph(nodeInOrder[idx]);	// uncomment this for very large hypergraph
 					
 				}
 				
@@ -1061,7 +742,6 @@ public class PIC_noPrune_speed {
 			
 			// construct the adjacent list 
 			constructADJ(false);		// uncomment this for normal-sized hypergraph
-//			constructADJ_largeGraph(false);	// uncomment this for very large hypergraph
 			
 			firstReConstruct = false;
 
