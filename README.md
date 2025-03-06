@@ -91,10 +91,10 @@ Line 1: data_set_name<br/>
 Line 2: evaluation the_results_of_which_method min_theta# max_theta# trial_No#<br/>
 Line 3: 0 -->
 
-Line 1 specifies the data set "citeseer_cociting". The file paths will then point to the folder corresponding to the data set "citeseer_cociting".  <br/>
+<!-- Line 1 specifies the data set "citeseer_cociting". The file paths will then point to the folder corresponding to the data set "citeseer_cociting".  <br/>
 Line 2 specifies the task and related parameters. The task is to "evaluate" the clustering results discovered by the method "PIC". The theta value varies from "0.31" to "0.31". We will evaluate "20" sets of clustering results to calculate the average metric scores.  <br/>
 Line 3 terminates the program.  <br/>
-(NOTE: Please remember to type "0" at the end, which is for termination of the program, then click Enter)  
+(NOTE: Please remember to type "0" at the end, which is for termination of the program, then click Enter)   -->
 
 Output:<br/>
 The metric scores obtained would be stored under the folder data/citeseer_cociting/measures/.
