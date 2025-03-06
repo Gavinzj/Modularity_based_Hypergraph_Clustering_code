@@ -1,10 +1,10 @@
 <meta name="robots" content="noindex">
 
-
+<h2>Repository Overview</h2>
 Code: code is available under the folder code/src/. <br/>
 Data: data is available under the folder code/data/. If a dataset contains multiple disconnected components, only the largest component is retained. <br/>
 
-Instructions on running the code: <br/>
+<h2>Instructions on running the code:</h2>
 
 To run the code, please run exp/Panel.java and then input the commands based on the tasks. Below are the details and several sample tasks are provided.
 
@@ -108,3 +108,29 @@ runningTime PIC_prune12 0.31 20<br/>
 
 Output:<br/>
 The running time would be saved under the folder data/citeseer_cociting/clustering/pic/.
+
+
+<h2>Instructions on adding Jama library (IntelliJ IDEA as an example):<h2>
+
+    Download Jama:
+        You can download the Jama JAR file from the official site (https://math.nist.gov/javanumerics/jama/).
+
+    Create/ Open Your Project:
+        Open IntelliJ IDEA and either create a new project or open your existing project.
+
+    Add Jama JAR to Your Project:
+        Right-click on your project folder in the Project pane.
+        Select "New" > "Directory" and name it something like libs (or another name of your choice).
+        Drag the Jama-1.0.3.jar file into the libs directory.
+
+    Include Jama in Your Project:
+        Right-click on Jama-1.0.3.jar in the libs directory.
+        Select "Add as Library".
+        In the dialog, choose "Module SDK" (if not automatically selected) and click OK.
+
+    Verify Library Addition:
+        In Project Structure, navigate to File > Project Structure > Libraries.
+        Make sure Jama-1.0.3.jar is listed as one of the libraries.
+
+    Use Jama in Your Code:
+        Now you can use the Jama library in your Java classes
