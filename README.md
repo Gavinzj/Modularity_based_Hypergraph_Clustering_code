@@ -208,3 +208,5 @@ The running time would be saved under the folder data/citeseer_cociting/clusteri
     </li>
     <li>Use Jama in Your Code: Now you can use the Jama library in your Java classes</li>
 </ul>
+
+Link to the code: https://github.com/Gavinzj/Modularity_based_Hypergraph_Clustering_code
