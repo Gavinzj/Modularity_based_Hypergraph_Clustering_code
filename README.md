@@ -56,7 +56,7 @@ Line 2 specifies the task and related parameters. The task is to do the "Cluster
 Line 3 terminates the program.  <br/>
 (NOTE: Please remember to type "0" at the end, which is for terminating the program, then click Enter)   -->
 
-<p>Output:</p>
+Output:<br/>
 The clustering results obtained would be stored under the folder data/citeseer_cociting/clustering/pic/.
 
 ------------------------------------------------------------------------------------------------------------
