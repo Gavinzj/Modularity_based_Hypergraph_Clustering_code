@@ -19,7 +19,7 @@ We included the parameters in a soft-coded way. The program exp/Panel.java provi
   <li>which_method_to_run</li>
   <li>ratio (the theta value), and</li>
   <li>number of trials</li>
-  <li>Other relevant parameters</li>
+  <li>other relevant parameters</li>
 </ol>
 
 Note that based on the user input, the values of global variables like file_paths and parameters will be modified by the program correspondingly. In other words, a user does not need to modify the code by hand.
