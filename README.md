@@ -2,7 +2,8 @@
 
 <h2>Repository Overview</h2>
 Code: code is available under the folder code/src/. <br/>
-Data: data is available under the folder code/data/. If a dataset contains multiple disconnected components, only the largest component is retained. <br/>
+Data: data is available under the folder code/data/. 
+Note: If a dataset contains multiple disconnected components, only the largest component is retained. <br/>
 
 <h2>Instructions on running the code:</h2>
 
@@ -22,12 +23,16 @@ Note that based on the user input, the values of global variables like file_path
 <hr>
 
 <h3>Sample Task 1</h3>
-Do the clustering using method PIC with no optimization technique (PIC_noPrune) on data set citeseer_cociting.
+Task: Do the clustering using method PIC with no optimization technique (PIC_noPrune) on data set citeseer_cociting.
 
-------------------------------------------------------------------------------------------------------------
-Sample Task-1. Do the clustering using method PIC with no optimization technique (PIC_noPrune) on data set citeseer_cociting.
 
 Commands:<br/>
+<pre>
+citeseer_cociting
+Clustering PIC_noPrune 0.31 0.31 20
+0
+</pre>
+
 citeseer_cociting<br/>
 Clustering PIC_noPrune 0.31 0.31 20<br/>
 0<br/>
