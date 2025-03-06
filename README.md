@@ -3,6 +3,7 @@
 
 Code: code is available under the folder code/src/. <br/>
 Data: data is available under the folder code/data/. <br/>
+* If a dataset contains multiple disconnected components, only the largest component is retained.
 
 Instructions on running the code: <br/>
 
