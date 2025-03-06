@@ -2,8 +2,8 @@
 
 <h2>Repository Overview</h2>
 Code: code is available under the folder code/src/. <br/>
-Data: data is available under the folder code/data/. 
-Note: If a dataset contains multiple disconnected components, only the largest component is retained. <br/>
+Data: data is available under the folder code/data/. <br/>
+Note: If a dataset contains multiple disconnected components, only the largest component is retained.
 
 <h2>Instructions on running the code:</h2>
 
