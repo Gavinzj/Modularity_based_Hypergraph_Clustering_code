@@ -157,71 +157,26 @@ The running time would be saved under the folder data/citeseer_cociting/clusteri
 
 <ul>
     <li>Download Jama: You can download the Jama JAR file from the official site (https://math.nist.gov/javanumerics/jama/).</li>
-
     <li>Create/Open Your Project: Open IntelliJ IDEA and either create a new project or open your existing project.</li>
-
-    <li><strong>Add the Jama JAR to Your Project:</strong>
+    <li>Add Jama JAR to Your Project:
         <ul>
-            <li>Follow these steps to add the <code>Jama-1.0.3.jar</code> file:</li>
-            <ol>
-                <li>Right-click on your project folder in the <strong>Project</strong> pane.</li>
-                <li>Select <strong>New</strong> > <strong>Directory</strong> and name it <code>libs</code> (or any name of your choice).</li>
-                <li>Drag the <code>Jama-1.0.3.jar</code> file into the <code>libs</code> directory.</li>
-            </ol>
+            <li>Right-click on your project folder in the Project pane.</li>
+            <li>Select "New" > "Directory" and name it something like libs (or another name of your choice).</li>
+            <li>Drag the Jama-1.0.3.jar file into the libs directory.</li>
         </ul>
     </li>
-
-    <li><strong>Include Jama in Your Project:</strong>
+    <li>Include Jama in Your Project:
         <ul>
-            <li>To include the library in your project, follow these steps:</li>
-            <ol>
-                <li>Right-click on <code>Jama-1.0.3.jar</code> in the <code>libs</code> directory.</li>
-                <li>Select <strong>Add as Library</strong>.</li>
-                <li>In the dialog, choose <strong>Module SDK</strong> (if not automatically selected) and click <strong>OK</strong>.</li>
-            </ol>
+            <li>Right-click on Jama-1.0.3.jar in the libs directory.</li>
+            <li>Select "Add as Library".</li>
+            <li>In the dialog, choose "Module SDK" (if not automatically selected) and click OK.</li>
         </ul>
     </li>
-
-    <li><strong>Verify Library Addition:</strong>
+    <li>Verify Library Addition:
         <ul>
-            <li>Ensure the library is correctly added:</li>
-            <ol>
-                <li>Go to <strong>File</strong> > <strong>Project Structure</strong> > <strong>Libraries</strong>.</li>
-                <li>Check that <code>Jama-1.0.3.jar</code> is listed as one of the libraries.</li>
-            </ol>
+            <li>In Project Structure, navigate to File > Project Structure > Libraries.</li>
+            <li>Make sure Jama-1.0.3.jar is listed as one of the libraries.</li>
         </ul>
     </li>
-
-    <li><strong>Use Jama in Your Code:</strong>
-        <ul>
-            <li>Now you can import and use the Jama library in your Java classes:</li>
-        </ul>
-    </li>
+    <li>Use Jama in Your Code: Now you can use the Jama library in your Java classes</li>
 </ul>
-
-
-<h2>Instructions on adding Jama library (IntelliJ IDEA as an example):</h2>
-
-
-
-Add Jama JAR to Your Project:<br>
-<ol>
-    <li>Right-click on your project folder in the Project pane.</li>
-    <li>Select "New" > "Directory" and name it something like libs (or another name of your choice).</li>
-    <li>Drag the Jama-1.0.3.jar file into the libs directory.</li>
-</ol>
-<!-- Right-click on your project folder in the Project pane.
-Select "New" > "Directory" and name it something like libs (or another name of your choice).
-Drag the Jama-1.0.3.jar file into the libs directory. -->
-
-Include Jama in Your Project:<br>
-    Right-click on Jama-1.0.3.jar in the libs directory.
-    Select "Add as Library".
-    In the dialog, choose "Module SDK" (if not automatically selected) and click OK.
-
-Verify Library Addition:<br>
-    In Project Structure, navigate to File > Project Structure > Libraries.
-    Make sure Jama-1.0.3.jar is listed as one of the libraries.
-
-Use Jama in Your Code:<br>
-    Now you can use the Jama library in your Java classes
