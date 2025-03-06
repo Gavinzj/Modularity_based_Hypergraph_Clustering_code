@@ -9,16 +9,11 @@ Data: data is available under the folder code/data/. If a dataset contains multi
 To run the code, please run exp/Panel.java and then input the commands based on the tasks. Below are the details and several sample tasks are provided.
 
 We included the parameters in a soft-coded way. The program exp/Panel.java provides a command line interface for a user to input the commands in the console. Specifically, when the program exp/Panel.java run, a user is required to input the information in the console including: <br/>
-1) data_set_name,  <br/>
-2) which_method_to_run,  <br/>
-3) ratio (the theta value), and  <br/>
-4) number of trials, etc.
-
 <ol>
   <li>data_set_name</li>
   <li>which_method_to_run</li>
-  <li>ratio (the theta value), and</li>
-  <li>number of trials</li>
+  <li>ratio (the theta value)</li>
+  <li>number of trials, and</li>
   <li>other relevant parameters</li>
 </ol>
 
