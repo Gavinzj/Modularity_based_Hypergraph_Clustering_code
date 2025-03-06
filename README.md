@@ -39,17 +39,24 @@ Clustering PIC_noPrune 0.31 0.31 20<br/>
 0<br/>
 <br/> -->
 
-The explanation for the commands: <br/>
-Line 1: data_set_name <br/>
+Explanation of commands: <br/>
+<ul>
+  <li>Line 1:<code>data_set_name</code> → Specifies the dataset "citeseer_cociting". The file paths will then point to the folder corresponding to the data set "citeseer_cociting".</li>
+  <li>Line 2:<code>Clustering which_method_to_run min_theta# max_theta# trial_No#</code> → Specifies the task and related parameters. The task is to do the "Clustering" using the method "PIC with no optimization technique". The theta value varies from "0.31" to "0.31". We will do the clustering "20" times.</li>
+  <li>Line 3:<code>0</code> → Terminates the program.</li>
+</ul>
+<p>(NOTE: Please remember to type "0" at the end, which is for terminating the program, then click Enter)</p>
+
+<!-- Line 1: data_set_name <br/>
 Line 2: Clustering which_method_to_run min_theta# max_theta# trial_No# <br/>
 Line 3: 0
 
 Line 1 specifies the data set "citeseer_cociting". The file paths will then point to the folder corresponding to the data set "citeseer_cociting".  <br/>
 Line 2 specifies the task and related parameters. The task is to do the "Clustering" using the method "PIC with no optimization technique". The theta value varies from "0.31" to "0.31". We will do the clustering "20" times.  <br/>
 Line 3 terminates the program.  <br/>
-(NOTE: Please remember to type "0" at the end, which is for terminating the program, then click Enter)  
+(NOTE: Please remember to type "0" at the end, which is for terminating the program, then click Enter)   -->
 
-Output:<br/>
+<p>Output:</p>
 The clustering results obtained would be stored under the folder data/citeseer_cociting/clustering/pic/.
 
 ------------------------------------------------------------------------------------------------------------
