@@ -59,20 +59,37 @@ Line 3 terminates the program.  <br/>
 Output:<br/>
 The clustering results obtained would be stored under the folder data/citeseer_cociting/clustering/pic/.
 
-------------------------------------------------------------------------------------------------------------
 
-Sample Task-2. Evaluate the clustering results of PIC on data set citeseer_cociting.
+<h3>Sample Task 2</h3>
+<p>Task: Evaluate the clustering results of PIC on data set citeseer_cociting.</p>
 
-Commands:<br/>
+
+<p>Commands:</p>
+<pre>
+citeseer_cociting
+evaluation PIC 0.31 0.31 20
+0
+</pre>
+
+<!-- Commands:<br/>
 citeseer_cociting<br/>
 evaluation PIC 0.31 0.31 20<br/>
 0<br/>
-<br/>
+<br/> -->
 
-The explanation for the commands:<br/>
+Explanation of commands: <br/>
+<ul>
+  <li>Line 1:<code>data_set_name</code> → Specifies the data set "citeseer_cociting". The file paths will then point to the folder corresponding to the data set "citeseer_cociting".</li>
+  <li>Line 2:<code>evaluation the_results_of_which_method min_theta# max_theta# trial_No#</code> → Specifies the task and related parameters. The task is to "evaluate" the clustering results discovered by the method "PIC". The theta value varies from "0.31" to "0.31". We will evaluate "20" sets of clustering results to calculate the average metric scores.</li>
+  <li>Line 3:<code>0</code> → Terminates the program.</li>
+</ul>
+<p>(NOTE: Please remember to type "0" at the end, which is for termination of the program, then click Enter)</p>
+
+
+<!-- The explanation for the commands:<br/>
 Line 1: data_set_name<br/>
 Line 2: evaluation the_results_of_which_method min_theta# max_theta# trial_No#<br/>
-Line 3: 0
+Line 3: 0 -->
 
 Line 1 specifies the data set "citeseer_cociting". The file paths will then point to the folder corresponding to the data set "citeseer_cociting".  <br/>
 Line 2 specifies the task and related parameters. The task is to "evaluate" the clustering results discovered by the method "PIC". The theta value varies from "0.31" to "0.31". We will evaluate "20" sets of clustering results to calculate the average metric scores.  <br/>
