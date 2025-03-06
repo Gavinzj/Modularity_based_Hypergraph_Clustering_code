@@ -59,6 +59,7 @@ Line 3 terminates the program.  <br/>
 Output:<br/>
 The clustering results obtained would be stored under the folder data/citeseer_cociting/clustering/pic/.
 
+<hr>
 
 <h3>Sample Task 2</h3>
 <p>Task: Evaluate the clustering results of PIC on data set citeseer_cociting.</p>
@@ -99,9 +100,10 @@ Line 3 terminates the program.  <br/>
 Output:<br/>
 The metric scores obtained would be stored under the folder data/citeseer_cociting/measures/.
 
-------------------------------------------------------------------------------------------------------------
+<hr>
 
-Sample Task-3. Calculate the running time of the method PIC with no optimization technique (PIC_noPrune) on data set citeseer_cociting.
+<h3>Sample Task 3</h3>
+<p>Task: Calculate the running time of the method PIC with no optimization technique (PIC_noPrune) on data set citeseer_cociting.</p>
 
 Commands:<br/>
 citeseer_cociting<br/>
@@ -121,9 +123,10 @@ Line 3 terminates the program.  <br/>
 Output:<br/>
 The running time would be saved under the folder data/citeseer_cociting/clustering/pic/.
 
-------------------------------------------------------------------------------------------------------------
+<hr>
 
-Sample Task-4. Do the clustering using method PIC with optimization techniques 1 and 2 (PIC_prune12) on data set citeseer_cociting.
+<h3>Sample Task 4</h3>
+<p>Task: Do the clustering using method PIC with optimization techniques 1 and 2 (PIC_prune12) on data set citeseer_cociting.</p>
 
 Commands:<br/>
 citeseer_cociting<br/>
@@ -134,9 +137,10 @@ Clustering PIC_prune12 0.31 0.31 20<br/>
 Output:<br/>
 The clustering results obtained would be stored under the folder data/citeseer_cociting/clustering/pic/.
 
-------------------------------------------------------------------------------------------------------------
+<hr>
 
-Sample Task-5. Calculate the running time of method PIC with optimization techniques 1 and 2 (PIC_prune12) on data set citeseer_cociting.
+<h3>Sample Task 5</h3>
+<p>Task: Calculate the running time of method PIC with optimization techniques 1 and 2 (PIC_prune12) on data set citeseer_cociting.</p>
 
 Commands:<br/>
 citeseer_cociting<br/>
@@ -147,11 +151,12 @@ runningTime PIC_prune12 0.31 20<br/>
 Output:<br/>
 The running time would be saved under the folder data/citeseer_cociting/clustering/pic/.
 
+<hr>
 
 <h2>Instructions on adding Jama library (IntelliJ IDEA as an example):<h2>
 
-    Download Jama:
-        You can download the Jama JAR file from the official site (https://math.nist.gov/javanumerics/jama/).
+<p>Download Jama:</p>
+You can download the Jama JAR file from the official site (https://math.nist.gov/javanumerics/jama/).
 
     Create/ Open Your Project:
         Open IntelliJ IDEA and either create a new project or open your existing project.
