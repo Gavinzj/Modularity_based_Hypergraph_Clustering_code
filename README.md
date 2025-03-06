@@ -105,20 +105,34 @@ The metric scores obtained would be stored under the folder data/citeseer_cociti
 <h3>Sample Task 3</h3>
 <p>Task: Calculate the running time of the method PIC with no optimization technique (PIC_noPrune) on data set citeseer_cociting.</p>
 
-Commands:<br/>
+<p>Commands:</p>
+<pre>
+citeseer_cociting
+runningTime PIC_noPrune 0.31 20
+0
+</pre>
+
+<!-- Commands:<br/>
 citeseer_cociting<br/>
 runningTime PIC_noPrune 0.31 20<br/>
 0<br/>
-<br/>
+<br/> -->
 
-The explanation for the commands:<br/>
+Explanation of commands: <br/>
+<ul>
+  <li>Line 1:<code>data_set_name</code> → Specifies the data set "citeseer_cociting". The file paths will then point to the folder corresponding to the data set "citeseer_cociting".</li>
+  <li>Line 2:<code>runningTime which_method_to_run theta# trial_No#</code> → Specifies the task and related parameters. The task is to calculate the "running time" of method "PIC with no optimization technique". The theta value is "0.31". We will run the method by "20" times to calculate the average.</li>
+  <li>Line 3:<code>0</code> → Terminates the program.</li>
+</ul>
+
+<!-- The explanation for the commands:<br/>
 Line 1: data_set_name<br/>
 Line 2: runningTime which_method_to_run theta# trial_No#<br/>
 Line 3: 0
 
 Line 1 specifies the data set "citeseer_cociting". The file paths will then point to the folder corresponding to the data set "citeseer_cociting".  <br/>
 Line 2 specifies the task and related parameters. The task is to calculate the "running time" of method "PIC with no optimization technique". The theta value is "0.31". We will run the method by "20" times to calculate the average.  <br/>
-Line 3 terminates the program.  <br/>
+Line 3 terminates the program.  <br/> -->
 
 Output:<br/>
 The running time would be saved under the folder data/citeseer_cociting/clustering/pic/.
@@ -128,11 +142,18 @@ The running time would be saved under the folder data/citeseer_cociting/clusteri
 <h3>Sample Task 4</h3>
 <p>Task: Do the clustering using method PIC with optimization techniques 1 and 2 (PIC_prune12) on data set citeseer_cociting.</p>
 
-Commands:<br/>
+<p>Commands:</p>
+<pre>
+citeseer_cociting
+Clustering PIC_prune12 0.31 0.31 20
+0
+</pre>
+
+<!-- Commands:<br/>
 citeseer_cociting<br/>
 Clustering PIC_prune12 0.31 0.31 20<br/>
 0<br/>
-<br/>
+<br/> -->
 
 Output:<br/>
 The clustering results obtained would be stored under the folder data/citeseer_cociting/clustering/pic/.
@@ -142,18 +163,25 @@ The clustering results obtained would be stored under the folder data/citeseer_c
 <h3>Sample Task 5</h3>
 <p>Task: Calculate the running time of method PIC with optimization techniques 1 and 2 (PIC_prune12) on data set citeseer_cociting.</p>
 
-Commands:<br/>
+<p>Commands:</p>
+<pre>
+citeseer_cociting
+runningTime PIC_prune12 0.31 20
+0
+</pre>
+
+<!-- Commands:<br/>
 citeseer_cociting<br/>
 runningTime PIC_prune12 0.31 20<br/>
 0<br/>
-<br/>
+<br/> -->
 
 Output:<br/>
 The running time would be saved under the folder data/citeseer_cociting/clustering/pic/.
 
 <hr>
 
-<h2>Instructions on Adding the Jama Library (IntelliJ IDEA Example)</h2>
+<h2>Instructions on Adding the Jama Library (if needed, IntelliJ IDEA Example)</h2>
 
 <ul>
     <li>Download Jama: You can download the Jama JAR file from the official site (https://math.nist.gov/javanumerics/jama/).</li>
