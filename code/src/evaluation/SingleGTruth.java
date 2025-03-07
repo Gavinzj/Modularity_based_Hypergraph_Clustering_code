@@ -583,26 +583,8 @@ public class SingleGTruth {
 			// for discover clusters
 			FileWriter fw_user = null;
 			
-			fw_user = new FileWriter(FilePath_Mon.filePathPre + "/measures/PRF_Prime_" + method + ".txt",true);
-			// iteration level precision recall f1
-			for (int trial = 0; trial < trials; trial++) {
-				fw_user.write(trial + "," + clusters_Discover[trial].length + "," + clusters_Ground.length + "," + String.format("%.4f",precisions_Prime[trial]) + ","
-						+ String.format("%.4f",recalls_Prime[trial]) + "," + String.format("%.4f",f1s_Prime[trial]) + "\n");
-			}
-			fw_user.write("\n");
-			fw_user.close();
-			
 			fw_user = new FileWriter(FilePath_Mon.filePathPre + "/measures/PRF_Prime.txt",true);
-			double minDiscoverSize = 0;
-			double maxDiscoverSize = 0;
-			double midDiscoverSize = 0;
-			double avgDiscoverSize = 0;
 			
-			double avgDiscoverNum = 0;
-			double avg_TP = 0;
-			double avg_FN = 0;
-			double avg_FP = 0;
-			double avg_TN = 0;
 			double avgPrecision = 0;
 			double avgRecall = 0;
 			double avgF1 = 0;
@@ -610,10 +592,6 @@ public class SingleGTruth {
 			double avgJCC = 0;
 			double avgBALRI = 0;
 			
-			int cnt_TP = 0;
-			int cnt_FN = 0;
-			int cnt_FP = 0;
-			int cnt_TN = 0;
 			int cnt_precision = 0;
 			int cnt_recall = 0;
 			int cnt_f1 = 0;
@@ -623,32 +601,6 @@ public class SingleGTruth {
 			
 			// iteration level precision recall f1
 			for (int trial = 0; trial < trials; trial++) {
-				minDiscoverSize += minClusterSizes_Discover[trial];
-				maxDiscoverSize += maxClusterSizes_Discover[trial];
-				midDiscoverSize += midClusterSizes_Discover[trial];
-				avgDiscoverSize += avgClusterSizes_Discover[trial];
-				
-				avgDiscoverNum += clusters_Discover[trial].length;
-				
-				if (!Double.isNaN(ConfusionMatrix[trial][0])) {
-					avg_TP += ConfusionMatrix[trial][0];
-					cnt_TP++;
-				}
-				
-				if (!Double.isNaN(ConfusionMatrix[trial][1])) {
-					avg_FN += ConfusionMatrix[trial][1];
-					cnt_FN++;
-				}
-				
-				if (!Double.isNaN(ConfusionMatrix[trial][2])) {
-					avg_FP += ConfusionMatrix[trial][2];
-					cnt_FP++;
-				}
-				
-				if (!Double.isNaN(ConfusionMatrix[trial][3])) {
-					avg_TN += ConfusionMatrix[trial][3];
-					cnt_TN++;
-				}
 				
 				if (!Double.isNaN(precisions_Prime[trial])) {
 					avgPrecision += precisions_Prime[trial];
@@ -680,16 +632,7 @@ public class SingleGTruth {
 					cnt_balri++;
 				}
 			}
-			minDiscoverSize /= trials;
-			maxDiscoverSize /= trials;
-			midDiscoverSize /= trials;
-			avgDiscoverSize /= trials;
 			
-			avgDiscoverNum /= trials;
-			avg_TP /= cnt_TP;
-			avg_FN /= cnt_FN;
-			avg_FP /= cnt_FP;
-			avg_TN /= cnt_TN;
 			avgPrecision /= cnt_precision;
 			avgRecall /= cnt_recall;
 			avgF1 /= cnt_f1;
@@ -843,14 +786,6 @@ public class SingleGTruth {
 			// for discover clusters
 			FileWriter fw_user = null;
 			
-			fw_user = new FileWriter(FilePath_Mon.filePathPre + "/measures/NMI_" + method + ".txt",true);
-			for (int trial = 0; trial < trials; trial++) {
-				fw_user.write(trial + "," + clusters_Discover[trial].length + "," + clusters_Ground.length + "," + String.format("%.4f",NMIs[trial]) + "\n");
-			}
-			fw_user.write("\n");
-			fw_user.flush();
-			fw_user.close();
-			
 			fw_user = new FileWriter(FilePath_Mon.filePathPre + "/measures/NMI.txt",true);
 			double avgDiscover = 0;
 			double avgNMI = 0;
@@ -866,7 +801,7 @@ public class SingleGTruth {
 			avgDiscover /= trials;
 			avgNMI /= cnt;
 			fw_user.write("NMI_" + method + "\n");
-			fw_user.write(String.format("%.4f",avgDiscover) + "," + clusters_Ground.length + "," + String.format("%.4f",avgNMI) + "\n");
+			fw_user.write(String.format("%.4f",avgNMI) + "\n");
 			fw_user.write("\n");
 			fw_user.close();
 
@@ -964,14 +899,6 @@ public class SingleGTruth {
 			// for discover clusters
 			FileWriter fw_user = null;
 			
-			fw_user = new FileWriter(FilePath_Mon.filePathPre + "/measures/Purity_" + method + ".txt",true);
-			for (int trial = 0; trial < trials; trial++) {
-				fw_user.write(trial + "," + clusters_Discover[trial].length + "," + clusters_Ground.length + "," + String.format("%.4f",Purities[trial]) + "\n");
-			}
-			fw_user.write("\n");
-			fw_user.flush();
-			fw_user.close();
-			
 			fw_user = new FileWriter(FilePath_Mon.filePathPre + "/measures/Purity.txt",true);
 			double avgDiscover = 0;
 			double avgPurity = 0;
@@ -983,7 +910,7 @@ public class SingleGTruth {
 			avgDiscover /= trials;
 			avgPurity /= trials;
 			fw_user.write("Purity_" + method + "\n");
-			fw_user.write(String.format("%.4f",avgDiscover) + "," + clusters_Ground.length + "," + String.format("%.4f",avgPurity) + "\n");
+			fw_user.write(String.format("%.4f",avgPurity) + "\n");
 			fw_user.write("\n");
 			fw_user.close();
 
@@ -1224,15 +1151,8 @@ public class SingleGTruth {
 		
 		try {
 			// for discover clusters
-			FileWriter fw_user = new FileWriter(FilePath_Mon.filePathPre + "/measures/ARI_Prime_" + method + ".txt",true);
-			for (int trial = 0; trial < trials; trial++) {
-				fw_user.write(trial + "," + clusters_Discover[trial].length + "," + clusters_Ground.length + "," + String.format("%.4f",ARIs_Prime[trial]) + "\n");
-			}
-			fw_user.write("\n");
-			fw_user.flush();
-			fw_user.close();
 			
-			fw_user = new FileWriter(FilePath_Mon.filePathPre + "/measures/ARI_Prime.txt",true);
+			FileWriter fw_user = new FileWriter(FilePath_Mon.filePathPre + "/measures/ARI_Prime.txt",true);
 			double avgDiscover = 0;
 			double avgARI = 0;
 			double cnt = 0;
@@ -1248,7 +1168,7 @@ public class SingleGTruth {
 			if (cnt > 0) avgARI /= cnt;
 			else avgARI = -2;
 			fw_user.write("ARI_Prime_" + method + "\n");
-			fw_user.write(String.format("%.4f",avgDiscover) + "," + clusters_Ground.length + "," + String.format("%.4f",avgARI) + "\n");
+			fw_user.write(String.format("%.4f",avgARI) + "\n");
 			fw_user.write("\n");
 			fw_user.close();
 
