@@ -162,7 +162,6 @@ public class Panel {
 								calculator.ComponentLoaded = false;
 								calculator.PRF_Prime(trials);
 								calculator.NMI(trials);
-								calculator.Purity(trials);
 								calculator.ARI_Prime(trials);
 								Hypergraph.garbbageCollector.gc();
 							}

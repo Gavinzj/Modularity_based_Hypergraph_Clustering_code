@@ -84,11 +84,6 @@ public class SingleGTruth {
 	double[] NMIs;	// nmi
 	NMI NMI;
 	
-	/////////////////////////////////// for Purity ///////////////////////////////////
-	// [trials]
-	double[] Purities;	// purity
-	Purity Purity;
-	
 	/////////////////////////////////// for ARIs_Prime ///////////////////////////////////
 	// [trials]
 	double[] ARIs_Prime;	// adjusted rand index
@@ -815,114 +810,6 @@ public class SingleGTruth {
 		Hypergraph.garbbageCollector.gc();
 	}
 
-	private class Purity extends Thread {
-		private int trial;
-
-		Purity(int trial) throws InterruptedException {
-			this.trial = trial;
-			start();
-		}
-
-		public void run() {
-			// refer to https://nlp.stanford.edu/IR-book/html/htmledition/evaluation-of-clustering-1.html
-			
-			int groundTruthNum = clusters_Ground.length;
-			int discoverNum = clusters_Discover[trial].length;
-
-			List<Integer>[] clusters_Discover_pointer = clusters_Discover[trial];
-			
-			ArrayList<Double> purity_sort = new ArrayList<Double>(discoverNum);
-			
-			double N = 0;
-			double[] counterArr;
-			double overlap;
-			// for each c1
-			for (int discoverIdx = 0; discoverIdx < discoverNum; discoverIdx++) {
-				
-				// counterArr[i] is the intersection of c1 with g_i,
-				counterArr = new double[groundTruthNum];
-
-				// for each element in c1
-				for (int vID : clusters_Discover_pointer[discoverIdx]) {
-					if (vertex2Cluster_Ground[vID] != -1) {
-						N++;
-						counterArr[vertex2Cluster_Ground[vID]]++;
-					}
-				}
-				
-				// find the maximum
-				overlap = -1;
-				for (int groundTruthIdx = 0; groundTruthIdx < groundTruthNum; groundTruthIdx++) {
-					if (overlap < counterArr[groundTruthIdx]) overlap = counterArr[groundTruthIdx];
-				}
-				
-				purity_sort.add(overlap);
-			}
- 
-			double left = (double) 1 / N;
-			double right = 0;
-			
-			if (groundTruthNum <= discoverNum) {
-				Collections.sort(purity_sort, Collections.reverseOrder());
-				
-				for (int i = 0; i < groundTruthNum; i ++) {
-					right += purity_sort.get(i);
-				}
-				
-				Purities[trial] = left * right;
-			} else {
-				for (int i = 0; i < discoverNum; i ++) {
-					right += purity_sort.get(i);
-				}
-				
-				Purities[trial] = left * right;
-			}
-
-			latch.countDown();
-		}
-	}
-	
-	public void Purity(int trials) throws IOException, InterruptedException {
-		
-		if (!DiscoverLoaded) loadDiscover(trials);
-		
-		Purities = new double[trials];
-		
-		latch = new CountDownLatch(trials);
-		for (int trial = 0; trial < trials; trial++) {
-			Purity = new Purity(trial);
-		}
-
-		latch.await();
-		
-		try {
-			// for discover clusters
-			FileWriter fw_user = null;
-			
-			fw_user = new FileWriter(FilePath_Mon.filePathPre + "/measures/Purity.txt",true);
-			double avgDiscover = 0;
-			double avgPurity = 0;
-			// iteration level precision recall f1
-			for (int trial = 0; trial < trials; trial++) {
-				avgDiscover += clusters_Discover[trial].length;
-				avgPurity += Purities[trial];
-			}
-			avgDiscover /= trials;
-			avgPurity /= trials;
-			fw_user.write("Purity_" + method + "\n");
-			fw_user.write(String.format("%.4f",avgPurity) + "\n");
-			fw_user.write("\n");
-			fw_user.close();
-
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-		Purities = null;
-		Hypergraph.garbbageCollector.gc();
-	}
-	
 	private class ARI_Prime extends Thread {
 		private int trial;
 
